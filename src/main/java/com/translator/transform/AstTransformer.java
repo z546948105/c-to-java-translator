@@ -46,7 +46,7 @@ public class AstTransformer implements AstVisitor<AstNode> {
             }
         }
 
-        if (!methods.isEmpty() || !standaloneStatements.isEmpty()) {
+        if (!methods.isEmpty() || !standaloneStatements.isEmpty() || !fields.isEmpty()) {
             List<VariableDeclaration> params = new ArrayList<>();
             Block classBody = new Block(new ArrayList<>());
 

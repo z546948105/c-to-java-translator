@@ -55,4 +55,52 @@ class TestPointerOffset {
         System.out.println("=== Simple Pointer Test ===");
         System.out.println(javaCode);
     }
+
+    @Test
+    void testMultiLevelPointer() {
+        String cCode = "int **pp;\n" +
+                      "int *p;\n" +
+                      "int x = 10;\n" +
+                      "p = &x;\n" +
+                      "pp = &p;\n" +
+                      "int y = **pp;\n";
+
+        Lexer lexer = new Lexer(cCode);
+        Parser parser = new Parser(lexer);
+
+        Program program = parser.parse();
+
+        AstTransformer transformer = new AstTransformer();
+        Program javaProgram = (Program) transformer.visitProgram(program);
+
+        CodeGenerator generator = new CodeGenerator();
+        String javaCode = generator.visitProgram(javaProgram);
+
+        assertNotNull(javaCode);
+        assertTrue(javaCode.contains("int[][]"), "Should convert int** to int[][]");
+        assertTrue(javaCode.contains("int[]"), "Should convert int* to int[]");
+        System.out.println("=== Multi-level Pointer Test ===");
+        System.out.println(javaCode);
+    }
+
+    @Test
+    void testThreeLevelPointer() {
+        String cCode = "int ***ppp;\n";
+
+        Lexer lexer = new Lexer(cCode);
+        Parser parser = new Parser(lexer);
+
+        Program program = parser.parse();
+
+        AstTransformer transformer = new AstTransformer();
+        Program javaProgram = (Program) transformer.visitProgram(program);
+
+        CodeGenerator generator = new CodeGenerator();
+        String javaCode = generator.visitProgram(javaProgram);
+
+        assertNotNull(javaCode);
+        assertTrue(javaCode.contains("int[][][]"), "Should convert int*** to int[][][]");
+        System.out.println("=== Three-level Pointer Test ===");
+        System.out.println(javaCode);
+    }
 }

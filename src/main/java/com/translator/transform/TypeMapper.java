@@ -64,11 +64,11 @@ public class TypeMapper {
             if (baseType.equals("char")) {
                 return "String";
             }
-            if (type.getPointerLevel() == 1) {
-                return baseType + "[]";
-            } else {
-                return "Object";
+            StringBuilder result = new StringBuilder(baseType);
+            for (int i = 0; i < type.getPointerLevel(); i++) {
+                result.append("[]");
             }
+            return result.toString();
         }
         
         return baseType;
