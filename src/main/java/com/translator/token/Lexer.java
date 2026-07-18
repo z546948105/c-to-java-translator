@@ -69,6 +69,43 @@ public class Lexer {
         }
     }
 
+    private void skipWhitespace() {
+        while (currentChar != -1 && Character.isWhitespace(currentChar)) {
+            readNextChar();
+        }
+    }
+
+    private boolean matchKeyword(String keyword) {
+        int backupChar = currentChar;
+        int backupLine = line;
+        int backupColumn = column;
+        
+        for (int i = 0; i < keyword.length(); i++) {
+            if (currentChar != keyword.charAt(i)) {
+                currentChar = backupChar;
+                line = backupLine;
+                column = backupColumn;
+                return false;
+            }
+            readNextChar();
+        }
+        
+        if (!Character.isLetterOrDigit(currentChar) && currentChar != '_') {
+            return true;
+        }
+        
+        currentChar = backupChar;
+        line = backupLine;
+        column = backupColumn;
+        return false;
+    }
+
+    private void eatKeyword(String keyword) {
+        for (int i = 0; i < keyword.length(); i++) {
+            readNextChar();
+        }
+    }
+
     private void readNextChar() {
         try {
             currentChar = reader.read();
@@ -93,13 +130,24 @@ public class Lexer {
         }
 
         if (currentChar == '#') {
-            while (currentChar != -1 && currentChar != '\n') {
+            readNextChar();
+            skipWhitespace();
+            StringBuilder sb = new StringBuilder();
+            while (currentChar != -1 && Character.isLetter(currentChar)) {
+                sb.append((char) currentChar);
                 readNextChar();
             }
-            if (currentChar == '\n') {
-                readNextChar();
+            if (sb.toString().equals("define")) {
+                return new Token(TokenType.DEFINE, "define", line, column);
+            } else {
+                while (currentChar != -1 && currentChar != '\n') {
+                    readNextChar();
+                }
+                if (currentChar == '\n') {
+                    readNextChar();
+                }
+                return nextToken();
             }
-            return nextToken();
         }
 
         if (Character.isLetter(currentChar) || currentChar == '_') {

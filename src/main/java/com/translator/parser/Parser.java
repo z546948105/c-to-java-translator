@@ -59,6 +59,16 @@ public class Parser {
         return currentToken.getType() == type;
     }
 
+    private void skipWhitespace() {
+        while (currentToken != null && 
+               (currentToken.getType() == TokenType.IDENTIFIER || 
+                currentToken.getType() == TokenType.NUMBER ||
+                currentToken.getType() == TokenType.STRING ||
+                currentToken.getType() == TokenType.CHAR_LITERAL)) {
+            currentToken = lexer.nextToken();
+        }
+    }
+
     private boolean matchAny(TokenType... types) {
         for (TokenType type : types) {
             if (match(type)) {
@@ -99,6 +109,9 @@ public class Parser {
         if (currentToken.getType() == TokenType.STATIC) {
             eat(TokenType.STATIC);
             isStatic = true;
+        }
+        if (currentToken.getType() == TokenType.DEFINE) {
+            return parseMacroDeclaration();
         }
         if (currentToken.getType() == TokenType.TYPEDEF) {
             return parseTypedefDeclaration();
@@ -1162,5 +1175,53 @@ public class Parser {
         } else {
             throw new RuntimeException("Unexpected token " + currentToken.getType() + " at line " + currentToken.getLine());
         }
+    }
+
+    private AstNode parseMacroDeclaration() {
+        eat(TokenType.DEFINE);
+        Identifier name = parseIdentifier();
+        
+        List<Identifier> parameters = new ArrayList<>();
+        
+        if (match(TokenType.LPAREN)) {
+            eat(TokenType.LPAREN);
+            if (!match(TokenType.RPAREN)) {
+                parameters.add(parseIdentifier());
+                while (match(TokenType.COMMA)) {
+                    eat(TokenType.COMMA);
+                    parameters.add(parseIdentifier());
+                }
+            }
+            eat(TokenType.RPAREN);
+        }
+        
+        StringBuilder bodyText = new StringBuilder();
+        int parenCount = 0;
+        
+        while (!match(TokenType.EOF) && !match(TokenType.SEMICOLON)) {
+            if (match(TokenType.LPAREN)) {
+                parenCount++;
+                bodyText.append("(");
+                eat(TokenType.LPAREN);
+            } else if (match(TokenType.RPAREN)) {
+                parenCount--;
+                bodyText.append(")");
+                eat(TokenType.RPAREN);
+                if (parenCount == 0 && !parameters.isEmpty()) {
+                    break;
+                }
+            } else {
+                bodyText.append(currentToken.getValue());
+                eat(currentToken.getType());
+            }
+        }
+        
+        if (match(TokenType.SEMICOLON)) {
+            eat(TokenType.SEMICOLON);
+        }
+        
+        AstNode body = new Literal(bodyText.toString().trim(), Literal.LiteralType.STRING);
+        
+        return new MacroDeclaration(name, parameters, body);
     }
 }

@@ -450,4 +450,32 @@ public class CodeGenerator implements AstVisitor<String> {
         sb.append("// Original: ").append(node.getOriginalCode());
         return sb.toString();
     }
+
+    @Override
+    public String visitMacroDeclaration(MacroDeclaration node) {
+        if (!node.isFunctionMacro()) {
+            String bodyText = node.getBody() instanceof Literal ? 
+                ((Literal) node.getBody()).getValue() : node.getBody().accept(this);
+            return "// #define " + node.getName().getName() + " " + bodyText;
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        sb.append("public static int ").append(node.getName().getName()).append("(");
+        for (int i = 0; i < node.getParameters().size(); i++) {
+            if (i > 0) {
+                sb.append(", ");
+            }
+            sb.append("int ").append(node.getParameters().get(i).accept(this));
+        }
+        sb.append(") {\n");
+        indentLevel++;
+        
+        String bodyText = node.getBody() instanceof Literal ? 
+            ((Literal) node.getBody()).getValue() : node.getBody().accept(this);
+        sb.append(getIndent()).append("return ").append(bodyText).append(";\n");
+        
+        indentLevel--;
+        sb.append("}");
+        return sb.toString();
+    }
 }

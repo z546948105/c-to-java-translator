@@ -33,4 +33,5 @@ public interface AstVisitor<T> {
     T visitEnumDeclaration(EnumDeclaration node);
     T visitComment(Comment node);
     T visitUnsupportedCode(UnsupportedCode node);
+    T visitMacroDeclaration(MacroDeclaration node);
 }

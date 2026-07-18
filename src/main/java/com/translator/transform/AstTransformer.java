@@ -41,6 +41,11 @@ public class AstTransformer implements AstVisitor<AstNode> {
                 javaDeclarations.add(transformed);
             } else if (transformed instanceof VariableDeclaration) {
                 fields.add(transformed);
+            } else if (transformed instanceof MacroDeclaration) {
+                AstNode macroResult = transformed.accept(this);
+                if (macroResult instanceof FunctionDeclaration) {
+                    methods.add(macroResult);
+                }
             } else {
                 standaloneStatements.add(transformed);
             }
@@ -444,5 +449,34 @@ public class AstTransformer implements AstVisitor<AstNode> {
     @Override
     public AstNode visitUnsupportedCode(UnsupportedCode node) {
         return node;
+    }
+
+    @Override
+    public AstNode visitMacroDeclaration(MacroDeclaration node) {
+        if (!node.isFunctionMacro()) {
+            return null;
+        }
+
+        String macroName = node.getName().getName();
+        String javaMethodName = macroName.toLowerCase();
+        
+        List<VariableDeclaration> javaParams = new ArrayList<>();
+        for (Identifier param : node.getParameters()) {
+            javaParams.add(new VariableDeclaration(new Type("int"), param));
+        }
+
+        String bodyText = node.getBody() instanceof Literal ? 
+            ((Literal) node.getBody()).getValue() : node.getBody().toString();
+        
+        List<AstNode> bodyStatements = new ArrayList<>();
+        bodyStatements.add(new ReturnStatement(new Literal(bodyText, Literal.LiteralType.INTEGER)));
+        Block methodBody = new Block(bodyStatements);
+
+        return new FunctionDeclaration(
+                new Type("public static int"),
+                new Identifier(javaMethodName),
+                javaParams,
+                methodBody
+        );
     }
 }
