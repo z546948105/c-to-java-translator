@@ -75,7 +75,7 @@ public class Parser {
                type == TokenType.CHAR || type == TokenType.FLOAT || type == TokenType.DOUBLE ||
                type == TokenType.VOID || type == TokenType.BOOL || type == TokenType.STRUCT ||
                type == TokenType.SIZE_T || type == TokenType.CONST || type == TokenType.UNSIGNED ||
-               type == TokenType.ENUM || type == TokenType.UNION || type == TokenType.IDENTIFIER;
+               type == TokenType.ENUM || type == TokenType.UNION;
     }
 
     public Program parse() {

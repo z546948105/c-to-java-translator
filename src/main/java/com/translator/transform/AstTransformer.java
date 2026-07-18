@@ -93,12 +93,19 @@ public class AstTransformer implements AstVisitor<AstNode> {
         Type javaType = (Type) node.getType().accept(this);
         AstNode javaInitializer = node.getInitializer() != null ? node.getInitializer().accept(this) : null;
         
-        if (javaType.getName().contains("[]") && javaInitializer instanceof UnaryExpression) {
-            UnaryExpression init = (UnaryExpression) javaInitializer;
-            if (init.getOperator().equals("&")) {
-                javaInitializer = init.getOperand();
+        if (javaType.getName().contains("[]")) {
+            if (javaInitializer instanceof UnaryExpression) {
+                UnaryExpression init = (UnaryExpression) javaInitializer;
+                if (init.getOperator().equals("&")) {
+                    javaInitializer = init.getOperand();
+                    String ptrName = node.getName().getName();
+                    String targetName = ((Identifier) init.getOperand()).getName();
+                    pointerMappings.put(ptrName, targetName);
+                    return new Comment("// " + ptrName + " -> " + targetName + " (pointer mapping)");
+                }
+            } else if (javaInitializer instanceof Identifier) {
                 String ptrName = node.getName().getName();
-                String targetName = ((Identifier) init.getOperand()).getName();
+                String targetName = ((Identifier) javaInitializer).getName();
                 pointerMappings.put(ptrName, targetName);
                 return new Comment("// " + ptrName + " -> " + targetName + " (pointer mapping)");
             }
@@ -311,10 +318,33 @@ public class AstTransformer implements AstVisitor<AstNode> {
     public AstNode visitUnaryExpression(UnaryExpression node) {
         AstNode javaOperand = node.getOperand().accept(this);
         
-        if (node.getOperator().equals("*") && javaOperand instanceof Identifier) {
-            String ptrName = ((Identifier) javaOperand).getName();
-            if (pointerMappings.containsKey(ptrName)) {
-                return new Identifier(pointerMappings.get(ptrName));
+        if (node.getOperator().equals("*")) {
+            if (javaOperand instanceof Identifier) {
+                String ptrName = ((Identifier) javaOperand).getName();
+                if (pointerMappings.containsKey(ptrName)) {
+                    return new Identifier(pointerMappings.get(ptrName));
+                }
+            } else if (javaOperand instanceof BinaryExpression) {
+                BinaryExpression binExpr = (BinaryExpression) javaOperand;
+                if (binExpr.getOperator().equals("+")) {
+                    AstNode left = binExpr.getLeft();
+                    AstNode right = binExpr.getRight();
+                    
+                    String arrName;
+                    if (left instanceof Identifier) {
+                        arrName = ((Identifier) left).getName();
+                        if (pointerMappings.containsKey(arrName)) {
+                            arrName = pointerMappings.get(arrName);
+                        }
+                        return new ArrayAccess(new Identifier(arrName), right);
+                    } else if (right instanceof Identifier) {
+                        arrName = ((Identifier) right).getName();
+                        if (pointerMappings.containsKey(arrName)) {
+                            arrName = pointerMappings.get(arrName);
+                        }
+                        return new ArrayAccess(new Identifier(arrName), left);
+                    }
+                }
             }
         }
         

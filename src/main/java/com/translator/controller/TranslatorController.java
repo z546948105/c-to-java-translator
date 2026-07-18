@@ -1,6 +1,8 @@
 package com.translator.controller;
 
 import com.translator.Translator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,8 +14,11 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class TranslatorController {
 
+    private static final Logger log = LoggerFactory.getLogger(TranslatorController.class);
+
     @GetMapping("/")
     public ResponseEntity<String> index() {
+        log.info("API index endpoint accessed");
         return ResponseEntity.ok("C to Java Translator API");
     }
 
@@ -25,7 +30,10 @@ public class TranslatorController {
             String cCode = request.get("code");
             String className = request.getOrDefault("className", "TranslatedCode");
             
+            log.info("Received translation request for class: {}, code length: {}", className, cCode != null ? cCode.length() : 0);
+            
             if (cCode == null || cCode.isEmpty()) {
+                log.warn("Translation request with empty code");
                 response.put("success", false);
                 response.put("error", "代码不能为空");
                 return ResponseEntity.badRequest().body(response);
@@ -33,12 +41,15 @@ public class TranslatorController {
             
             String javaCode = Translator.translateCode(cCode, className);
             
+            log.info("Translation successful, output length: {}", javaCode != null ? javaCode.length() : 0);
+            
             response.put("success", true);
             response.put("javaCode", javaCode);
             response.put("className", className);
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
+            log.error("Translation failed: {}", e.getMessage(), e);
             response.put("success", false);
             response.put("error", e.getMessage());
             return ResponseEntity.internalServerError().body(response);
