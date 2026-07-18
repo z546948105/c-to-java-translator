@@ -10,6 +10,7 @@ import com.translator.ast.Type;
  * 映射规则：
  * - 基础类型：int → int, float → float, char → char
  * - 指针类型：int* → int[], int** → int[][], char* → String, void* → Object
+ * - 文件类型：FILE* → java.io.FileInputStream（根据模式选择具体类）
  * - 数组类型：保留数组维度
  * - 结构体/枚举：去掉前缀
  */
@@ -37,6 +38,7 @@ public class TypeMapper {
             case "void": return "void";
             case "bool": return "boolean";
             case "size_t": return "long";
+            case "FILE": return "java.io.FileInputStream";
             case "unsigned int": return "int";
             case "unsigned long": return "long";
             case "long long": return "long";
@@ -74,6 +76,9 @@ public class TypeMapper {
             }
             if (baseType.equals("char")) {
                 return "String";
+            }
+            if (baseType.equals("java.io.FileInputStream")) {
+                return "java.io.FileInputStream";
             }
             StringBuilder result = new StringBuilder(baseType);
             for (int i = 0; i < type.getPointerLevel(); i++) {

@@ -22,7 +22,7 @@ import java.util.List;
  * - strcmp → String.compareTo
  * - abs → Math.abs
  * - sqrt → Math.sqrt
- * - 等其他常用标准库函数
+ * - 文件 I/O：fopen/fclose/fread/fwrite/fprintf/fscanf/fgets/fputs/fseek/ftell/rewind/feof/ferror
  */
 public class StdlibMapper {
     public static boolean isStdlibFunction(String name) {
@@ -106,9 +106,130 @@ public class StdlibMapper {
             case "itoa":
                 return new FunctionCall(new Identifier(javaName), newArgs);
 
+            case "fopen":
+                if (newArgs.size() >= 2 && newArgs.get(1) instanceof Literal) {
+                    String mode = ((Literal) newArgs.get(1)).getValue();
+                    String javaClass = mapFopenMode(mode);
+                    List<AstNode> fopenArgs = new ArrayList<>();
+                    fopenArgs.add(newArgs.get(0));
+                    return new FunctionCall(new Identifier("new " + javaClass), fopenArgs);
+                }
+                return new FunctionCall(new Identifier("new FileInputStream"), newArgs.subList(0, 1));
+
+            case "fclose":
+                if (!newArgs.isEmpty()) {
+                    return new FunctionCall(new Identifier(newArgs.get(0).toString() + ".close"), new ArrayList<>());
+                }
+                return call;
+
+            case "fread":
+                if (newArgs.size() >= 4) {
+                    AstNode streamArg = newArgs.get(3);
+                    return new FunctionCall(new Identifier(streamArg.toString() + ".read"), 
+                        java.util.Arrays.asList(newArgs.get(0)));
+                }
+                return call;
+
+            case "fwrite":
+                if (newArgs.size() >= 4) {
+                    AstNode streamArg = newArgs.get(3);
+                    return new FunctionCall(new Identifier(streamArg.toString() + ".write"), 
+                        java.util.Arrays.asList(newArgs.get(0)));
+                }
+                return call;
+
+            case "fprintf":
+                if (newArgs.size() >= 1) {
+                    AstNode streamArg = newArgs.get(0);
+                    List<AstNode> fmtArgs = new ArrayList<>(newArgs.subList(1, newArgs.size()));
+                    if (!fmtArgs.isEmpty() && fmtArgs.get(0) instanceof Literal) {
+                        String format = ((Literal) fmtArgs.get(0)).getValue();
+                        format = format.replace("%d", "%d")
+                                       .replace("%s", "%s")
+                                       .replace("%c", "%c")
+                                       .replace("%f", "%f")
+                                       .replace("%x", "%x");
+                        fmtArgs.set(0, new Literal(format, Literal.LiteralType.STRING));
+                    }
+                    return new FunctionCall(new Identifier(streamArg.toString() + ".printf"), fmtArgs);
+                }
+                return call;
+
+            case "fgets":
+                if (newArgs.size() >= 1) {
+                    AstNode streamArg = newArgs.get(newArgs.size() - 1);
+                    return new FunctionCall(new Identifier(streamArg.toString() + ".readLine"), new ArrayList<>());
+                }
+                return call;
+
+            case "fputs":
+                if (newArgs.size() >= 2) {
+                    AstNode streamArg = newArgs.get(1);
+                    return new FunctionCall(new Identifier(streamArg.toString() + ".println"), 
+                        java.util.Arrays.asList(newArgs.get(0)));
+                }
+                return call;
+
+            case "fseek":
+                if (newArgs.size() >= 3) {
+                    AstNode streamArg = newArgs.get(0);
+                    AstNode offsetArg = newArgs.get(1);
+                    return new FunctionCall(new Identifier(streamArg.toString() + ".skip"), 
+                        java.util.Arrays.asList(offsetArg));
+                }
+                return call;
+
+            case "ftell":
+                if (!newArgs.isEmpty()) {
+                    AstNode streamArg = newArgs.get(0);
+                    return new FunctionCall(new Identifier(streamArg.toString() + ".available"), new ArrayList<>());
+                }
+                return call;
+
+            case "rewind":
+                if (!newArgs.isEmpty()) {
+                    AstNode streamArg = newArgs.get(0);
+                    return new FunctionCall(new Identifier(streamArg.toString() + ".reset"), new ArrayList<>());
+                }
+                return call;
+
+            case "feof":
+                if (!newArgs.isEmpty()) {
+                    AstNode streamArg = newArgs.get(0);
+                    return new FunctionCall(new Identifier(streamArg.toString() + ".isEOF"), new ArrayList<>());
+                }
+                return call;
+
+            case "ferror":
+                if (!newArgs.isEmpty()) {
+                    AstNode streamArg = newArgs.get(0);
+                    return new FunctionCall(new Identifier(streamArg.toString() + ".checkError"), new ArrayList<>());
+                }
+                return call;
+
             default:
                 return new FunctionCall(new Identifier(javaName), newArgs);
         }
+    }
+
+    private static String mapFopenMode(String mode) {
+        if (mode.contains("w")) {
+            if (mode.contains("b")) {
+                return "java.io.FileOutputStream";
+            }
+            return "java.io.FileWriter";
+        } else if (mode.contains("r")) {
+            if (mode.contains("b")) {
+                return "java.io.FileInputStream";
+            }
+            return "java.io.FileReader";
+        } else if (mode.contains("a")) {
+            if (mode.contains("b")) {
+                return "java.io.FileOutputStream";
+            }
+            return "java.io.FileWriter";
+        }
+        return "java.io.FileInputStream";
     }
 
     private static final java.util.Map<String, String> stdlibMap = new java.util.HashMap<>();
@@ -133,8 +254,6 @@ public class StdlibMapper {
         stdlibMap.put("puts_s", "System.out.println");
         stdlibMap.put("gets", "ScannerInput.nextLine");
         stdlibMap.put("gets_s", "ScannerInput.nextLine");
-        stdlibMap.put("fgets", "ScannerInput.nextLine");
-        stdlibMap.put("fputs", "System.out.println");
         stdlibMap.put("atoi", "Integer.parseInt");
         stdlibMap.put("atof", "Double.parseDouble");
         stdlibMap.put("itoa", "Integer.toString");
@@ -157,5 +276,19 @@ public class StdlibMapper {
         stdlibMap.put("time", "System.currentTimeMillis");
         stdlibMap.put("memcpy", "System.arraycopy");
         stdlibMap.put("memset", "Arrays.fill");
+
+        stdlibMap.put("fopen", "FileIO.open");
+        stdlibMap.put("fclose", "close");
+        stdlibMap.put("fread", "read");
+        stdlibMap.put("fwrite", "write");
+        stdlibMap.put("fprintf", "printf");
+        stdlibMap.put("fscanf", "read");
+        stdlibMap.put("fgets", "readLine");
+        stdlibMap.put("fputs", "println");
+        stdlibMap.put("fseek", "skip");
+        stdlibMap.put("ftell", "getFilePointer");
+        stdlibMap.put("rewind", "seekToBegin");
+        stdlibMap.put("feof", "isEOF");
+        stdlibMap.put("ferror", "checkError");
     }
 }
