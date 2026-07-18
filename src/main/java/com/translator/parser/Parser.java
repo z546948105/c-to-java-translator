@@ -49,7 +49,7 @@ public class Parser {
     private UnsupportedCode createUnsupportedCode(String reason) {
         String originalCode = consumeUntil(TokenType.SEMICOLON, TokenType.LBRACE, TokenType.RBRACE, TokenType.EOF);
         int line = currentToken.getLine();
-        if (match(TokenType.SEMICOLON)) {
+        if (match(TokenType.SEMICOLON) || match(TokenType.LBRACE) || match(TokenType.RBRACE)) {
             currentToken = lexer.nextToken();
         }
         return new UnsupportedCode(originalCode, reason, line);
@@ -75,24 +75,22 @@ public class Parser {
                type == TokenType.CHAR || type == TokenType.FLOAT || type == TokenType.DOUBLE ||
                type == TokenType.VOID || type == TokenType.BOOL || type == TokenType.STRUCT ||
                type == TokenType.SIZE_T || type == TokenType.CONST || type == TokenType.UNSIGNED ||
-               type == TokenType.ENUM || type == TokenType.UNION;
+               type == TokenType.ENUM || type == TokenType.UNION || type == TokenType.IDENTIFIER;
     }
 
     public Program parse() {
         List<AstNode> declarations = new ArrayList<>();
-        System.out.println("=== Starting parse ===");
-        System.out.println("Initial token: " + currentToken.getType() + " = " + currentToken.getValue() + " at line " + currentToken.getLine());
         while (!match(TokenType.EOF)) {
-            System.out.println("Processing token: " + currentToken.getType() + " = " + currentToken.getValue() + " at line " + currentToken.getLine());
             try {
-                declarations.add(parseDeclaration());
+                AstNode decl = parseDeclaration();
+                if (decl != null) {
+                    declarations.add(decl);
+                }
             } catch (RuntimeException e) {
                 String reason = e.getMessage();
                 declarations.add(createUnsupportedCode(reason));
             }
-            System.out.println("After declaration, next token: " + currentToken.getType() + " = " + currentToken.getValue() + " at line " + currentToken.getLine());
         }
-        System.out.println("=== Parse completed ===");
         return new Program(declarations);
     }
 
@@ -163,9 +161,20 @@ public class Parser {
             }
         } else if (matchAny(TokenType.IF, TokenType.WHILE, TokenType.FOR, TokenType.DO, TokenType.SWITCH, TokenType.BREAK, TokenType.CONTINUE, TokenType.RETURN, TokenType.LBRACE)) {
             return parseStatement();
+        } else if (match(TokenType.RBRACE)) {
+            eat(TokenType.RBRACE);
+            return null;
         } else if (!isTypeStart(currentToken)) {
             return createUnsupportedCode("Expected type keyword but got: " + currentToken.getType());
         }
+        
+        if (currentToken.getType() == TokenType.IDENTIFIER) {
+            Token next = peek();
+            if (next != null && next.getType() != TokenType.MUL && next.getType() != TokenType.LPAREN) {
+                return parseStatement();
+            }
+        }
+        
         Type type = parseType();
         Identifier name = parseIdentifier();
         if (currentToken.getType() == TokenType.LPAREN) {
@@ -607,6 +616,9 @@ public class Parser {
                 typeName.append(" ").append(currentToken.getValue());
                 eat(currentToken.getType());
             }
+        } else if (match(TokenType.IDENTIFIER)) {
+            typeName.append(currentToken.getValue());
+            eat(TokenType.IDENTIFIER);
         } else {
             throw new RuntimeException("Expected type but got " + currentToken.getType() + " at line " + currentToken.getLine());
         }
@@ -1114,7 +1126,7 @@ public class Parser {
                 Type type = parseType();
                 argument = new Identifier(type.getName());
             } else {
-                argument = parseExpression();
+                argument = parsePrimary();
             }
             eat(TokenType.RPAREN);
             return new FunctionCall(new Identifier("sizeof"), java.util.Arrays.asList(argument));
