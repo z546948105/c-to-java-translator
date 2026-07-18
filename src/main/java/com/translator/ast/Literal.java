@@ -1,5 +1,10 @@
 package com.translator.ast;
 
+/**
+ * 字面量节点，表示常量值
+ * <p>
+ * 支持的类型：INTEGER（整数）、FLOAT（浮点数）、STRING（字符串）、CHARACTER（字符）、NULL（空指针）
+ */
 public class Literal implements AstNode {
     private final String value;
     private final LiteralType type;

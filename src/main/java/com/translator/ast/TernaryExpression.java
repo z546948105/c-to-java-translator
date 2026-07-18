@@ -1,5 +1,10 @@
 package com.translator.ast;
 
+/**
+ * 三元表达式节点，表示条件表达式（三目运算符）
+ * <p>
+ * 例如：condition ? trueExpr : falseExpr
+ */
 public class TernaryExpression implements AstNode {
     private final AstNode condition;
     private final AstNode trueExpression;

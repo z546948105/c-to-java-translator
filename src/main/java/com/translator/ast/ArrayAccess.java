@@ -1,5 +1,10 @@
 package com.translator.ast;
 
+/**
+ * 数组访问节点，表示数组元素的访问操作
+ * <p>
+ * 例如：arr[index]
+ */
 public class ArrayAccess implements AstNode {
     private final AstNode array;
     private final AstNode index;

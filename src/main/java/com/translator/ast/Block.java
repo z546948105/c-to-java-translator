@@ -2,6 +2,11 @@ package com.translator.ast;
 
 import java.util.List;
 
+/**
+ * 代码块节点，表示一组语句的集合
+ * <p>
+ * 对应 C 语言中的 {} 包裹的语句块
+ */
 public class Block implements AstNode {
     private final List<AstNode> statements;
 

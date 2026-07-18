@@ -1,5 +1,10 @@
 package com.translator.ast;
 
+/**
+ * return 语句节点，表示函数返回语句
+ * <p>
+ * 支持带返回值和不带返回值两种形式
+ */
 public class ReturnStatement implements AstNode {
     private final AstNode expression;
 

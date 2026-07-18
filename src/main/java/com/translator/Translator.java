@@ -8,6 +8,13 @@ import com.translator.transform.AstTransformer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * C 语言到 Java 语言的翻译器核心类
+ * <p>
+ * 负责协调整个翻译流程：词法分析 → 语法分析 → AST 转换 → 代码生成
+ * <p>
+ * 使用访问者模式遍历 AST，将 C 代码转换为等价的 Java 代码
+ */
 public class Translator {
     private static final Logger log = LoggerFactory.getLogger(Translator.class);
     

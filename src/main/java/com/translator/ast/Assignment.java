@@ -1,5 +1,10 @@
 package com.translator.ast;
 
+/**
+ * 赋值表达式节点，表示变量赋值操作
+ * <p>
+ * 支持简单赋值（=）和复合赋值（+= -= *= /= %= 等）
+ */
 public class Assignment implements AstNode {
     private final AstNode left;
     private final String operator;

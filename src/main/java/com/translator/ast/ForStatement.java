@@ -1,5 +1,12 @@
 package com.translator.ast;
 
+/**
+ * for 语句节点，表示计数循环
+ * <p>
+ * 包含初始化、条件、更新三个部分
+ * <p>
+ * 例如：for (init; condition; update) { body }
+ */
 public class ForStatement implements AstNode {
     private final AstNode init;
     private final AstNode condition;

@@ -1,5 +1,10 @@
 package com.translator.ast;
 
+/**
+ * while 语句节点，表示先判断后执行的循环
+ * <p>
+ * 例如：while (condition) { body }
+ */
 public class WhileStatement implements AstNode {
     private final AstNode condition;
     private final Block body;

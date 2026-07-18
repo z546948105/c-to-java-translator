@@ -1,5 +1,10 @@
 package com.translator.ast;
 
+/**
+ * 类型转换表达式节点，表示显式类型转换
+ * <p>
+ * 例如：(int) value
+ */
 public class TypeCastExpression implements AstNode {
     private final Type type;
     private final AstNode expression;

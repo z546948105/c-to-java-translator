@@ -1,5 +1,10 @@
 package com.translator.ast;
 
+/**
+ * 二元表达式节点，表示带有两个操作数的表达式
+ * <p>
+ * 支持的运算符：算术（+ - * / %）、比较（== != < > <= >=）、逻辑（&& ||）、位运算等
+ */
 public class BinaryExpression implements AstNode {
     private final AstNode left;
     private final String operator;

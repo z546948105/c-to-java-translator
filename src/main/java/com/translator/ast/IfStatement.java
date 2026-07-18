@@ -1,5 +1,10 @@
 package com.translator.ast;
 
+/**
+ * if 语句节点，表示条件分支语句
+ * <p>
+ * 支持带 else 分支和不带 else 分支两种形式
+ */
 public class IfStatement implements AstNode {
     private final AstNode condition;
     private final Block thenBlock;

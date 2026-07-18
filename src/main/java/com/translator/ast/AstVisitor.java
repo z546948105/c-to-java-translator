@@ -1,5 +1,14 @@
 package com.translator.ast;
 
+/**
+ * AST 访问者接口（AstVisitor）
+ * <p>
+ * 定义访问各种 AST 节点的方法，实现访问者模式
+ * <p>
+ * 具体实现类包括：
+ * - AstTransformer：将 C AST 转换为 Java AST
+ * - CodeGenerator：将 Java AST 转换为源代码文本
+ */
 public interface AstVisitor<T> {
     T visitProgram(Program node);
     T visitType(Type node);

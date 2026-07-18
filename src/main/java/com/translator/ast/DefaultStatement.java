@@ -2,6 +2,9 @@ package com.translator.ast;
 
 import java.util.List;
 
+/**
+ * default 语句节点，表示 switch 语句中的默认分支
+ */
 public class DefaultStatement implements AstNode {
     private final List<AstNode> statements;
 

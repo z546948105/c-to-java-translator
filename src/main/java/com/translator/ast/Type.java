@@ -1,5 +1,14 @@
 package com.translator.ast;
 
+/**
+ * 类型节点，表示 C 语言中的数据类型
+ * <p>
+ * 支持：基础类型（int, float 等）、指针类型、数组类型
+ * <p>
+ * pointerLevel: 指针级别（0=非指针, 1=一级指针, 2=二级指针...）
+ * isArray: 是否为数组类型
+ * arraySize: 数组大小（可为 null，表示未知大小）
+ */
 public class Type implements AstNode {
     private final String name;
     private final int pointerLevel;

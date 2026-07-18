@@ -2,6 +2,11 @@ package com.translator.ast;
 
 import java.util.List;
 
+/**
+ * 结构体声明节点，表示结构体类型的定义
+ * <p>
+ * 转换为 Java 时对应类的定义
+ */
 public class StructDeclaration implements AstNode {
     private final Identifier name;
     private final List<VariableDeclaration> fields;

@@ -2,6 +2,17 @@ package com.translator.transform;
 
 import com.translator.ast.Type;
 
+/**
+ * 类型映射器（TypeMapper）
+ * <p>
+ * 将 C 语言类型映射为 Java 语言类型
+ * <p>
+ * 映射规则：
+ * - 基础类型：int → int, float → float, char → char
+ * - 指针类型：int* → int[], int** → int[][], char* → String, void* → Object
+ * - 数组类型：保留数组维度
+ * - 结构体/枚举：去掉前缀
+ */
 public class TypeMapper {
     public static String mapPrimitiveType(String cType) {
         if (cType.startsWith("struct ")) {

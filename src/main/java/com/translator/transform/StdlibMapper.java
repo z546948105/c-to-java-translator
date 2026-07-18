@@ -8,6 +8,22 @@ import com.translator.ast.Literal;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 标准库函数映射器（StdlibMapper）
+ * <p>
+ * 将 C 标准库函数调用映射为 Java 标准库调用
+ * <p>
+ * 主要映射：
+ * - printf → System.out.printf
+ * - malloc → new
+ * - free → 移除（Java 自动垃圾回收）
+ * - strlen → String.length
+ * - strcpy → String.copyValueOf
+ * - strcmp → String.compareTo
+ * - abs → Math.abs
+ * - sqrt → Math.sqrt
+ * - 等其他常用标准库函数
+ */
 public class StdlibMapper {
     public static boolean isStdlibFunction(String name) {
         return stdlibMap.containsKey(name);

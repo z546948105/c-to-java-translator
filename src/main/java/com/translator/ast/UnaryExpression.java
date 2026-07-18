@@ -1,5 +1,12 @@
 package com.translator.ast;
 
+/**
+ * 一元表达式节点，表示带有一个操作数的表达式
+ * <p>
+ * 支持的运算符：++ -- + - ! ~ *（解引用） &（取地址）
+ * <p>
+ * postfix: 表示是否为后缀形式（如 i++ 而非 ++i）
+ */
 public class UnaryExpression implements AstNode {
     private final String operator;
     private final AstNode operand;

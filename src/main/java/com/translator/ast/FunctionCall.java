@@ -2,6 +2,11 @@ package com.translator.ast;
 
 import java.util.List;
 
+/**
+ * 函数调用节点，表示函数或方法的调用
+ * <p>
+ * 包含函数名和参数列表
+ */
 public class FunctionCall implements AstNode {
     private final Identifier name;
     private final List<AstNode> arguments;

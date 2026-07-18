@@ -7,6 +7,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * AST 转换器（AstTransformer）
+ * <p>
+ * 将 C 语言 AST 转换为 Java 语言 AST
+ * <p>
+ * 主要转换规则：
+ * - 指针类型转换为数组类型（int* → int[]）
+ * - 多级指针转换为多维数组（int** → int[][]）
+ * - 宏函数转换为静态方法
+ * - 结构体转换为类
+ * - 标准库函数映射为 Java 标准库调用
+ * - 字符串比较使用 equals 方法
+ */
 public class AstTransformer implements AstVisitor<AstNode> {
     private String className = "TranslatedCode";
     private Set<String> stringVariables = new HashSet<>();

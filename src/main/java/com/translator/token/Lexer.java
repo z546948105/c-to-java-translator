@@ -6,6 +6,15 @@ import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 词法分析器（Lexer）
+ * <p>
+ * 将 C 源文件文本转换为 token 流
+ * <p>
+ * 支持的 token 类型：标识符、数字、字符串、关键字、运算符、分隔符等
+ * <p>
+ * 同时处理预处理指令（如 #define）
+ */
 public class Lexer {
     private final BufferedReader reader;
     private int currentChar;

@@ -8,6 +8,19 @@ import com.translator.token.TokenType;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 语法分析器（Parser）
+ * <p>
+ * 将 token 流解析为抽象语法树（AST）
+ * <p>
+ * 使用递归下降解析方法，支持 C 语言的主要语法结构：
+ * - 函数声明和定义
+ * - 变量声明和初始化
+ * - 结构体和枚举定义
+ * - 宏定义（#define）
+ * - 控制流语句（if, while, for, switch）
+ * - 表达式和赋值语句
+ */
 public class Parser {
     private final Lexer lexer;
     private Token currentToken;

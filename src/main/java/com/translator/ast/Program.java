@@ -2,6 +2,11 @@ package com.translator.ast;
 
 import java.util.List;
 
+/**
+ * 程序根节点，代表整个 C 源文件
+ * <p>
+ * 包含所有顶层声明（函数、变量、结构体、枚举、宏定义等）
+ */
 public class Program implements AstNode {
     private final List<AstNode> declarations;
 

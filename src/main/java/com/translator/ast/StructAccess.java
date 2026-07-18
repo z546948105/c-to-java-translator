@@ -1,5 +1,10 @@
 package com.translator.ast;
 
+/**
+ * 结构体成员访问节点，表示访问结构体或类的成员
+ * <p>
+ * 例如：struct.field
+ */
 public class StructAccess implements AstNode {
     private final AstNode struct;
     private final Identifier field;

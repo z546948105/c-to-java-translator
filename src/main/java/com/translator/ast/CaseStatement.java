@@ -2,6 +2,9 @@ package com.translator.ast;
 
 import java.util.List;
 
+/**
+ * case 语句节点，表示 switch 语句中的一个分支
+ */
 public class CaseStatement implements AstNode {
     private final AstNode value;
     private final List<AstNode> statements;

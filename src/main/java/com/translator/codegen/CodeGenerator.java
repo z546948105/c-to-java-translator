@@ -2,6 +2,19 @@ package com.translator.codegen;
 
 import com.translator.ast.*;
 
+/**
+ * 代码生成器（CodeGenerator）
+ * <p>
+ * 将 Java AST 转换为 Java 源代码文本
+ * <p>
+ * 使用访问者模式遍历 AST 节点，生成对应的 Java 代码：
+ * - 包声明和导入语句
+ * - 类定义和字段
+ * - 方法定义和参数
+ * - 控制流语句（if, while, for, switch）
+ * - 表达式和赋值语句
+ * - 注释和不支持代码的标记
+ */
 public class CodeGenerator implements AstVisitor<String> {
     private static final String INDENT = "    ";
     private int indentLevel = 0;

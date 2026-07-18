@@ -2,6 +2,11 @@ package com.translator.ast;
 
 import java.util.List;
 
+/**
+ * switch 语句节点，表示多分支选择语句
+ * <p>
+ * 包含 switch 表达式和 case/default 分支列表
+ */
 public class SwitchStatement implements AstNode {
     private final AstNode expression;
     private final List<AstNode> cases;

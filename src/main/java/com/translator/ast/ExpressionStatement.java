@@ -1,5 +1,10 @@
 package com.translator.ast;
 
+/**
+ * 表达式语句节点，表示以分号结尾的表达式
+ * <p>
+ * 例如：x = 5; 或 func();
+ */
 public class ExpressionStatement implements AstNode {
     private final AstNode expression;
 

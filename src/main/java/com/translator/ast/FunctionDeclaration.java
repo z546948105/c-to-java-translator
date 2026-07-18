@@ -2,6 +2,13 @@ package com.translator.ast;
 
 import java.util.List;
 
+/**
+ * 函数声明节点，表示函数的定义或原型
+ * <p>
+ * 包含返回类型、函数名、参数列表和函数体
+ * <p>
+ * 如果 body 为 null，则表示函数原型（仅声明）
+ */
 public class FunctionDeclaration implements AstNode {
     private final Type returnType;
     private final Identifier name;

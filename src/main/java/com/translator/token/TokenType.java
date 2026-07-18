@@ -1,5 +1,17 @@
 package com.translator.token;
 
+/**
+ * 词法单元类型枚举
+ * <p>
+ * 定义了 C 语言词法分析器能够识别的所有 token 类型
+ * <p>
+ * 分类说明：
+ * - 基础类型：IDENTIFIER, NUMBER, STRING, CHAR_LITERAL
+ * - 类型关键字：INT, LONG, SHORT, CHAR, FLOAT, DOUBLE, VOID, BOOL, STRUCT, TYPEDEF, ENUM, UNION
+ * - 控制关键字：IF, ELSE, WHILE, FOR, DO, SWITCH, CASE, DEFAULT, BREAK, CONTINUE, RETURN
+ * - 运算符：算术、赋值、比较、逻辑、位运算等
+ * - 分隔符：括号、大括号、方括号、逗号、分号等
+ */
 public enum TokenType {
     IDENTIFIER,
     NUMBER,

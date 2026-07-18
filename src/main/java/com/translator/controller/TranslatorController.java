@@ -9,6 +9,17 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 翻译控制器（TranslatorController）
+ * <p>
+ * 提供 REST API 接口，用于 C 代码到 Java 代码的翻译
+ * <p>
+ * 主要接口：
+ * - GET /api/ - 健康检查和接口说明
+ * - POST /api/translate - 翻译 C 代码为 Java 代码
+ * - POST /api/translate/file - 翻译文件（同 translate）
+ * - GET /api/health - 服务健康状态检查
+ */
 @RestController
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")

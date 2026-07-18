@@ -2,6 +2,11 @@ package com.translator.ast;
 
 import java.util.List;
 
+/**
+ * 枚举声明节点，表示枚举类型的定义
+ * <p>
+ * 转换为 Java 时对应 enum 类型的定义
+ */
 public class EnumDeclaration implements AstNode {
     private final Identifier name;
     private final List<Identifier> values;
