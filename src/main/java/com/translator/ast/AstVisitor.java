@@ -32,4 +32,5 @@ public interface AstVisitor<T> {
     T visitArrayInitializer(ArrayInitializer node);
     T visitEnumDeclaration(EnumDeclaration node);
     T visitComment(Comment node);
+    T visitUnsupportedCode(UnsupportedCode node);
 }

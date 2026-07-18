@@ -410,4 +410,9 @@ public class AstTransformer implements AstVisitor<AstNode> {
         Identifier name = node.getName() != null ? (Identifier) node.getName().accept(this) : null;
         return new EnumDeclaration(name, javaValues);
     }
+
+    @Override
+    public AstNode visitUnsupportedCode(UnsupportedCode node) {
+        return node;
+    }
 }

@@ -441,4 +441,13 @@ public class CodeGenerator implements AstVisitor<String> {
     public String visitComment(Comment node) {
         return node.getText();
     }
+
+    @Override
+    public String visitUnsupportedCode(UnsupportedCode node) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("// [UNSUPPORTED] Line ").append(node.getLine()).append("\n");
+        sb.append("// Reason: ").append(node.getReason()).append("\n");
+        sb.append("// Original: ").append(node.getOriginalCode());
+        return sb.toString();
+    }
 }

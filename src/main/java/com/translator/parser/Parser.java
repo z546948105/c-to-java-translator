@@ -29,6 +29,32 @@ public class Parser {
         }
     }
 
+    private String consumeUntil(TokenType... stopTokens) {
+        StringBuilder sb = new StringBuilder();
+        while (!match(TokenType.EOF)) {
+            boolean foundStop = false;
+            for (TokenType stop : stopTokens) {
+                if (match(stop)) {
+                    foundStop = true;
+                    break;
+                }
+            }
+            if (foundStop) break;
+            sb.append(currentToken.getValue());
+            currentToken = lexer.nextToken();
+        }
+        return sb.toString();
+    }
+
+    private UnsupportedCode createUnsupportedCode(String reason) {
+        String originalCode = consumeUntil(TokenType.SEMICOLON, TokenType.LBRACE, TokenType.RBRACE, TokenType.EOF);
+        int line = currentToken.getLine();
+        if (match(TokenType.SEMICOLON)) {
+            currentToken = lexer.nextToken();
+        }
+        return new UnsupportedCode(originalCode, reason, line);
+    }
+
     private boolean match(TokenType type) {
         return currentToken.getType() == type;
     }
@@ -58,7 +84,12 @@ public class Parser {
         System.out.println("Initial token: " + currentToken.getType() + " = " + currentToken.getValue() + " at line " + currentToken.getLine());
         while (!match(TokenType.EOF)) {
             System.out.println("Processing token: " + currentToken.getType() + " = " + currentToken.getValue() + " at line " + currentToken.getLine());
-            declarations.add(parseDeclaration());
+            try {
+                declarations.add(parseDeclaration());
+            } catch (RuntimeException e) {
+                String reason = e.getMessage();
+                declarations.add(createUnsupportedCode(reason));
+            }
             System.out.println("After declaration, next token: " + currentToken.getType() + " = " + currentToken.getValue() + " at line " + currentToken.getLine());
         }
         System.out.println("=== Parse completed ===");
@@ -90,7 +121,7 @@ public class Parser {
                     }
                 }
             } else {
-                throw new RuntimeException("Unexpected token " + currentToken.getType() + " after struct at line " + currentToken.getLine());
+                return createUnsupportedCode("Unexpected token after struct: " + currentToken.getType());
             }
         } else if (currentToken.getType() == TokenType.ENUM) {
             eat(TokenType.ENUM);
@@ -109,7 +140,7 @@ public class Parser {
                     }
                 }
             } else {
-                throw new RuntimeException("Unexpected token " + currentToken.getType() + " after enum at line " + currentToken.getLine());
+                return createUnsupportedCode("Unexpected token after enum: " + currentToken.getType());
             }
         } else if (currentToken.getType() == TokenType.UNION) {
             eat(TokenType.UNION);
@@ -128,10 +159,12 @@ public class Parser {
                     }
                 }
             } else {
-                throw new RuntimeException("Unexpected token " + currentToken.getType() + " after union at line " + currentToken.getLine());
+                return createUnsupportedCode("Unexpected token after union: " + currentToken.getType());
             }
         } else if (matchAny(TokenType.IF, TokenType.WHILE, TokenType.FOR, TokenType.DO, TokenType.SWITCH, TokenType.BREAK, TokenType.CONTINUE, TokenType.RETURN, TokenType.LBRACE)) {
             return parseStatement();
+        } else if (!isTypeStart(currentToken)) {
+            return createUnsupportedCode("Expected type keyword but got: " + currentToken.getType());
         }
         Type type = parseType();
         Identifier name = parseIdentifier();
