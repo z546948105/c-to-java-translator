@@ -62,6 +62,10 @@ public class TypeMapper {
                 } else {
                     elementType = "Object";
                 }
+            } else {
+                if (baseType.equals("char")) {
+                    return "String";
+                }
             }
             if (type.getArraySize() != null) {
                 return elementType + "[" + type.getArraySize() + "]";

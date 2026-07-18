@@ -394,13 +394,18 @@ public class AstTransformer implements AstVisitor<AstNode> {
     @Override
     public AstNode visitFunctionCall(FunctionCall node) {
         if (StdlibMapper.isStdlibFunction(node.getName().getName())) {
-            FunctionCall mapped = StdlibMapper.mapFunctionCall(node);
-            List<AstNode> javaArgs = new ArrayList<>();
-            for (AstNode arg : mapped.getArguments()) {
-                AstNode mappedArg = mapPointerReferences(arg);
-                javaArgs.add(mappedArg.accept(this));
+            AstNode mapped = StdlibMapper.mapFunctionCall(node);
+            if (mapped instanceof FunctionCall) {
+                FunctionCall fc = (FunctionCall) mapped;
+                List<AstNode> javaArgs = new ArrayList<>();
+                for (AstNode arg : fc.getArguments()) {
+                    AstNode mappedArg = mapPointerReferences(arg);
+                    javaArgs.add(mappedArg.accept(this));
+                }
+                return new FunctionCall(fc.getName(), javaArgs);
+            } else {
+                return mapped.accept(this);
             }
-            return new FunctionCall(mapped.getName(), javaArgs);
         }
 
         List<AstNode> javaArgs = new ArrayList<>();

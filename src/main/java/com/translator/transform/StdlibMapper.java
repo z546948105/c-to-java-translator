@@ -1,6 +1,8 @@
 package com.translator.transform;
 
 import com.translator.ast.AstNode;
+import com.translator.ast.Assignment;
+import com.translator.ast.BinaryExpression;
 import com.translator.ast.FunctionCall;
 import com.translator.ast.Identifier;
 import com.translator.ast.Literal;
@@ -17,9 +19,10 @@ import java.util.List;
  * - printf → System.out.printf
  * - malloc → new
  * - free → 移除（Java 自动垃圾回收）
- * - strlen → String.length
- * - strcpy → String.copyValueOf
- * - strcmp → String.compareTo
+ * - strlen → String.length()
+ * - strcpy → dst = src
+ * - strcat → dst = dst + src
+ * - strcmp → String.compareTo()
  * - abs → Math.abs
  * - sqrt → Math.sqrt
  * - 文件 I/O：fopen/fclose/fread/fwrite/fprintf/fscanf/fgets/fputs/fseek/ftell/rewind/feof/ferror
@@ -33,33 +36,29 @@ public class StdlibMapper {
         return stdlibMap.getOrDefault(name, name);
     }
 
-    public static FunctionCall mapFunctionCall(FunctionCall call) {
+    public static AstNode mapFunctionCall(FunctionCall call) {
         String name = call.getName().getName();
         if (!stdlibMap.containsKey(name)) {
             return call;
         }
 
-        String javaName = stdlibMap.get(name);
         List<AstNode> newArgs = new ArrayList<>(call.getArguments());
 
         switch (name) {
             case "printf":
-                if (!newArgs.isEmpty()) {
-                    AstNode formatArg = newArgs.get(0);
-                    if (formatArg instanceof Literal) {
-                        String format = ((Literal) formatArg).getValue();
-                        format = format.replace("%d", "%d")
-                                       .replace("%s", "%s")
-                                       .replace("%c", "%c")
-                                       .replace("%f", "%f")
-                                       .replace("%x", "%x");
-                        newArgs.set(0, new Literal(format, Literal.LiteralType.STRING));
-                    }
+                if (!newArgs.isEmpty() && newArgs.get(0) instanceof Literal) {
+                    String format = ((Literal) newArgs.get(0)).getValue();
+                    format = format.replace("%d", "%d")
+                                   .replace("%s", "%s")
+                                   .replace("%c", "%c")
+                                   .replace("%f", "%f")
+                                   .replace("%x", "%x");
+                    newArgs.set(0, new Literal(format, Literal.LiteralType.STRING));
                 }
-                return new FunctionCall(new Identifier(javaName), newArgs);
+                return new FunctionCall(new Identifier("System.out.printf"), newArgs);
 
             case "scanf":
-                return new FunctionCall(new Identifier(javaName), newArgs);
+                return new FunctionCall(new Identifier("ScannerInput.scan"), newArgs);
 
             case "malloc":
                 if (!newArgs.isEmpty() && newArgs.get(0) instanceof FunctionCall) {
@@ -81,30 +80,106 @@ public class StdlibMapper {
                 return new FunctionCall(new Identifier("/* free removed */"), new ArrayList<>());
 
             case "strlen":
-                return new FunctionCall(new Identifier(javaName), newArgs);
+                if (!newArgs.isEmpty()) {
+                    AstNode arg = newArgs.get(0);
+                    return new FunctionCall(new Identifier(arg.toString() + ".length"), new ArrayList<>());
+                }
+                return call;
 
             case "strcpy":
-                return new FunctionCall(new Identifier("copyValue"), newArgs);
+                if (newArgs.size() >= 2) {
+                    return new Assignment(newArgs.get(0), newArgs.get(1));
+                }
+                return call;
+
+            case "strncpy":
+                if (newArgs.size() >= 3) {
+                    FunctionCall substringCall = new FunctionCall(
+                        new Identifier(newArgs.get(1).toString() + ".substring"),
+                        java.util.Arrays.asList(new Literal("0", Literal.LiteralType.INTEGER), newArgs.get(2))
+                    );
+                    return new Assignment(newArgs.get(0), substringCall);
+                }
+                return call;
 
             case "strcmp":
-                return new FunctionCall(new Identifier(javaName), newArgs);
+                if (newArgs.size() >= 2) {
+                    return new FunctionCall(
+                        new Identifier(newArgs.get(0).toString() + ".compareTo"),
+                        java.util.Arrays.asList(newArgs.get(1))
+                    );
+                }
+                return call;
+
+            case "strncmp":
+                if (newArgs.size() >= 3) {
+                    FunctionCall substringCall = new FunctionCall(
+                        new Identifier(newArgs.get(0).toString() + ".substring"),
+                        java.util.Arrays.asList(new Literal("0", Literal.LiteralType.INTEGER), newArgs.get(2))
+                    );
+                    return new FunctionCall(
+                        new Identifier(substringCall.toString() + ".compareTo"),
+                        java.util.Arrays.asList(newArgs.get(1))
+                    );
+                }
+                return call;
+
+            case "strcat":
+                if (newArgs.size() >= 2) {
+                    return new Assignment(
+                        newArgs.get(0),
+                        new BinaryExpression(newArgs.get(0), "+", newArgs.get(1))
+                    );
+                }
+                return call;
+
+            case "strncat":
+                if (newArgs.size() >= 3) {
+                    FunctionCall substringCall = new FunctionCall(
+                        new Identifier(newArgs.get(1).toString() + ".substring"),
+                        java.util.Arrays.asList(new Literal("0", Literal.LiteralType.INTEGER), newArgs.get(2))
+                    );
+                    return new Assignment(
+                        newArgs.get(0),
+                        new BinaryExpression(newArgs.get(0), "+", substringCall)
+                    );
+                }
+                return call;
+
+            case "strchr":
+                if (newArgs.size() >= 2) {
+                    return new FunctionCall(
+                        new Identifier(newArgs.get(0).toString() + ".indexOf"),
+                        java.util.Arrays.asList(newArgs.get(1))
+                    );
+                }
+                return call;
+
+            case "strstr":
+                if (newArgs.size() >= 2) {
+                    return new FunctionCall(
+                        new Identifier(newArgs.get(0).toString() + ".indexOf"),
+                        java.util.Arrays.asList(newArgs.get(1))
+                    );
+                }
+                return call;
 
             case "puts":
             case "puts_s":
-                return new FunctionCall(new Identifier(javaName), newArgs);
+                return new FunctionCall(new Identifier("System.out.println"), newArgs);
 
             case "gets":
             case "gets_s":
-                return new FunctionCall(new Identifier(javaName), newArgs);
+                return new FunctionCall(new Identifier("ScannerInput.nextLine"), newArgs);
 
             case "atoi":
-                return new FunctionCall(new Identifier(javaName), newArgs);
+                return new FunctionCall(new Identifier("Integer.parseInt"), newArgs);
 
             case "atof":
-                return new FunctionCall(new Identifier(javaName), newArgs);
+                return new FunctionCall(new Identifier("Double.parseDouble"), newArgs);
 
             case "itoa":
-                return new FunctionCall(new Identifier(javaName), newArgs);
+                return new FunctionCall(new Identifier("Integer.toString"), newArgs);
 
             case "fopen":
                 if (newArgs.size() >= 2 && newArgs.get(1) instanceof Literal) {
@@ -208,6 +283,7 @@ public class StdlibMapper {
                 return call;
 
             default:
+                String javaName = stdlibMap.get(name);
                 return new FunctionCall(new Identifier(javaName), newArgs);
         }
     }
