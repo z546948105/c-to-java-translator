@@ -1,0 +1,39 @@
+// main.c
+#include <stdio.h>
+#include "utils.h"
+
+int main() {
+    printf("=== Multi-file C Program Demo ===\n\n");
+
+    // 1. 调用质数判断函数
+    printf("[Prime Check]\n");
+    int test_nums[] = {2, 17, 24, 97, 100};
+    for (int i = 0; i < 5; i++) {
+        printf("  %d is %s prime.\n", 
+               test_nums[i], 
+               is_prime(test_nums[i]) ? "a" : "NOT a");
+    }
+
+    // 2. 调用元音统计函数
+    printf("\n[Vowel Count]\n");
+    const char *sentences[] = {
+        "Hello World",
+        "C Programming Language",
+        "Multi-file compilation"
+    };
+    for (int i = 0; i < 3; i++) {
+        printf("  \"%s\" has %d vowels.\n", 
+               sentences[i], 
+               count_vowels(sentences[i]));
+    }
+
+    // 3. 调用数组最大值函数
+    printf("\n[Max Value]\n");
+    int data[] = {12, 45, 7, 89, 23, 56, 3};
+    int size = sizeof(data) / sizeof(data[0]);
+    int max_val = find_max(data, size);
+    printf("  Max value in array is: %d\n", max_val);
+
+    printf("\n=== Demo Finished ===\n");
+    return 0;
+}

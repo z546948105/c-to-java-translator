@@ -1,0 +1,15 @@
+target/
+*.jar
+*.war
+.classpath
+.project
+.settings/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.class
+*.log
+.idea/
+*.iml

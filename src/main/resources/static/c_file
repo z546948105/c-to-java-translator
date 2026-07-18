@@ -1,0 +1,443 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+// 缓存节点结构
+typedef struct CacheNode {
+    char *key;
+    void *value;
+    size_t value_size;
+    struct CacheNode *next;      // 哈希冲突链表
+    struct CacheNode *prev_lru;  // LRU双向链表前驱
+    struct CacheNode *next_lru;  // LRU双向链表后继
+    long long access_time;       // 最近访问时间戳
+} CacheNode;
+
+// 缓存系统结构
+typedef struct {
+    CacheNode **buckets;         // 哈希桶数组
+    size_t bucket_count;         // 桶数量
+    size_t size;                 // 当前缓存项数量
+    size_t max_size;             // 最大缓存项数量
+    CacheNode *lru_head;         // LRU链表头（最近使用）
+    CacheNode *lru_tail;         // LRU链表尾（最久未使用）
+    long long current_time;      // 模拟时间戳
+} CacheSystem;
+
+// 函数声明
+static unsigned int hash_function(const char *key, size_t bucket_count);
+static CacheNode *create_node(const char *key, const void *value, size_t value_size);
+static void destroy_node(CacheNode *node);
+static void move_to_lru_head(CacheSystem *cache, CacheNode *node);
+static void remove_from_lru_list(CacheSystem *cache, CacheNode *node);
+static void evict_lru_entry(CacheSystem *cache);
+static CacheNode *find_node(CacheSystem *cache, const char *key);
+
+// 初始化缓存系统
+CacheSystem *cache_create(size_t bucket_count, size_t max_size) {
+    if (bucket_count == 0 || max_size == 0) return NULL;
+
+    CacheSystem *cache = (CacheSystem *)malloc(sizeof(CacheSystem));
+    if (!cache) return NULL;
+
+    cache->buckets = (CacheNode **)calloc(bucket_count, sizeof(CacheNode *));
+    if (!cache->buckets) {
+        free(cache);
+        return NULL;
+    }
+
+    cache->bucket_count = bucket_count;
+    cache->max_size = max_size;
+    cache->size = 0;
+    cache->lru_head = NULL;
+    cache->lru_tail = NULL;
+    cache->current_time = 0;
+
+    return cache;
+}
+
+// 销毁缓存系统
+void cache_destroy(CacheSystem *cache) {
+    if (!cache) return;
+
+    // 释放所有节点
+    for (size_t i = 0; i < cache->bucket_count; i++) {
+        CacheNode *current = cache->buckets[i];
+        while (current) {
+            CacheNode *temp = current;
+            current = current->next;
+            destroy_node(temp);
+        }
+    }
+
+    free(cache->buckets);
+    free(cache);
+}
+
+// 插入或更新缓存
+bool cache_put(CacheSystem *cache, const char *key, const void *value, size_t value_size) {
+    if (!cache || !key || !value || value_size == 0) return false;
+
+    cache->current_time++;
+
+    // 检查是否已存在
+    CacheNode *existing = find_node(cache, key);
+    if (existing) {
+        // 更新现有节点
+        void *new_value = malloc(value_size);
+        if (!new_value) return false;
+        memcpy(new_value, value, value_size);
+
+        free(existing->value);
+        existing->value = new_value;
+        existing->value_size = value_size;
+        existing->access_time = cache->current_time;
+
+        move_to_lru_head(cache, existing);
+        return true;
+    }
+
+    // 创建新节点
+    CacheNode *new_node = create_node(key, value, value_size);
+    if (!new_node) return false;
+
+    new_node->access_time = cache->current_time;
+
+    // 插入哈希桶
+    unsigned int index = hash_function(key, cache->bucket_count);
+    new_node->next = cache->buckets[index];
+    cache->buckets[index] = new_node;
+
+    // 加入LRU链表头部
+    if (cache->lru_head) {
+        cache->lru_head->prev_lru = new_node;
+        new_node->next_lru = cache->lru_head;
+    } else {
+        cache->lru_tail = new_node;
+    }
+    cache->lru_head = new_node;
+
+    cache->size++;
+
+    // 如果超过最大容量，淘汰最久未使用的
+    while (cache->size > cache->max_size) {
+        evict_lru_entry(cache);
+    }
+
+    return true;
+}
+
+// 获取缓存值
+void *cache_get(CacheSystem *cache, const char *key, size_t *value_size) {
+    if (!cache || !key || !value_size) return NULL;
+
+    cache->current_time++;
+
+    CacheNode *node = find_node(cache, key);
+    if (!node) return NULL;
+
+    node->access_time = cache->current_time;
+    move_to_lru_head(cache, node);
+
+    *value_size = node->value_size;
+    return node->value;
+}
+
+// 删除缓存项
+bool cache_remove(CacheSystem *cache, const char *key) {
+    if (!cache || !key) return false;
+
+    unsigned int index = hash_function(key, cache->bucket_count);
+    CacheNode *current = cache->buckets[index];
+    CacheNode *prev = NULL;
+
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            // 从哈希链表中移除
+            if (prev) {
+                prev->next = current->next;
+            } else {
+                cache->buckets[index] = current->next;
+            }
+
+            // 从LRU链表中移除
+            remove_from_lru_list(cache, current);
+
+            destroy_node(current);
+            cache->size--;
+            return true;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return false;
+}
+
+// 获取缓存大小
+size_t cache_size(const CacheSystem *cache) {
+    return cache ? cache->size : 0;
+}
+
+// 检查键是否存在
+bool cache_contains(const CacheSystem *cache, const char *key) {
+    if (!cache || !key) return false;
+    return find_node((CacheSystem *)cache, key) != NULL;
+}
+
+// 清空缓存
+void cache_clear(CacheSystem *cache) {
+    if (!cache) return;
+
+    for (size_t i = 0; i < cache->bucket_count; i++) {
+        CacheNode *current = cache->buckets[i];
+        while (current) {
+            CacheNode *temp = current;
+            current = current->next;
+            destroy_node(temp);
+        }
+        cache->buckets[i] = NULL;
+    }
+
+    cache->lru_head = NULL;
+    cache->lru_tail = NULL;
+    cache->size = 0;
+}
+
+// 打印缓存状态（调试用）
+void cache_print_stats(const CacheSystem *cache) {
+    if (!cache) return;
+
+    printf("=== Cache Statistics ===\n");
+    printf("Bucket Count: %zu\n", cache->bucket_count);
+    printf("Current Size: %zu / %zu\n", cache->size, cache->max_size);
+    printf("Current Time: %lld\n", cache->current_time);
+
+    // 统计各桶的链表长度
+    size_t max_chain = 0, total_chain = 0, non_empty_buckets = 0;
+    for (size_t i = 0; i < cache->bucket_count; i++) {
+        size_t chain_len = 0;
+        CacheNode *current = cache->buckets[i];
+        while (current) {
+            chain_len++;
+            current = current->next;
+        }
+        if (chain_len > 0) non_empty_buckets++;
+        if (chain_len > max_chain) max_chain = chain_len;
+        total_chain += chain_len;
+    }
+
+    printf("Non-empty Buckets: %zu\n", non_empty_buckets);
+    printf("Load Factor: %.2f\n", 
+           (double)cache->size / cache->bucket_count);
+    printf("Max Chain Length: %zu\n", max_chain);
+    printf("Avg Chain Length: %.2f\n", 
+           non_empty_buckets > 0 ? (double)total_chain / non_empty_buckets : 0.0);
+    printf("========================\n");
+}
+
+// ========== 内部辅助函数 ==========
+
+// 哈希函数（DJB2算法）
+static unsigned int hash_function(const char *key, size_t bucket_count) {
+    unsigned long hash = 5381;
+    int c;
+    while ((c = *key++)) {
+        hash = ((hash << 5) + hash) + c;
+    }
+    return (unsigned int)(hash % bucket_count);
+}
+
+// 创建新节点
+static CacheNode *create_node(const char *key, const void *value, size_t value_size) {
+    CacheNode *node = (CacheNode *)malloc(sizeof(CacheNode));
+    if (!node) return NULL;
+
+    node->key = strdup(key);
+    if (!node->key) {
+        free(node);
+        return NULL;
+    }
+
+    node->value = malloc(value_size);
+    if (!node->value) {
+        free(node->key);
+        free(node);
+        return NULL;
+    }
+    memcpy(node->value, value, value_size);
+
+    node->value_size = value_size;
+    node->next = NULL;
+    node->prev_lru = NULL;
+    node->next_lru = NULL;
+    node->access_time = 0;
+
+    return node;
+}
+
+// 销毁节点
+static void destroy_node(CacheNode *node) {
+    if (!node) return;
+    free(node->key);
+    free(node->value);
+    free(node);
+}
+
+// 将节点移动到LRU链表头部
+static void move_to_lru_head(CacheSystem *cache, CacheNode *node) {
+    if (!cache || !node) return;
+
+    // 如果已经在头部，直接返回
+    if (cache->lru_head == node) return;
+
+    // 先从当前位置移除
+    remove_from_lru_list(cache, node);
+
+    // 插入到头部
+    node->prev_lru = NULL;
+    node->next_lru = cache->lru_head;
+    if (cache->lru_head) {
+        cache->lru_head->prev_lru = node;
+    }
+    cache->lru_head = node;
+
+    // 如果链表之前为空，更新尾部
+    if (!cache->lru_tail) {
+        cache->lru_tail = node;
+    }
+}
+
+// 从LRU链表中移除节点
+static void remove_from_lru_list(CacheSystem *cache, CacheNode *node) {
+    if (!cache || !node) return;
+
+    if (node->prev_lru) {
+        node->prev_lru->next_lru = node->next_lru;
+    } else {
+        // 节点是头部
+        cache->lru_head = node->next_lru;
+    }
+
+    if (node->next_lru) {
+        node->next_lru->prev_lru = node->prev_lru;
+    } else {
+        // 节点是尾部
+        cache->lru_tail = node->prev_lru;
+    }
+
+    node->prev_lru = NULL;
+    node->next_lru = NULL;
+}
+
+// 淘汰LRU条目
+static void evict_lru_entry(CacheSystem *cache) {
+    if (!cache || !cache->lru_tail) return;
+
+    CacheNode *victim = cache->lru_tail;
+
+    // 从LRU链表移除
+    remove_from_lru_list(cache, victim);
+
+    // 从哈希桶移除
+    unsigned int index = hash_function(victim->key, cache->bucket_count);
+    CacheNode *current = cache->buckets[index];
+    CacheNode *prev = NULL;
+
+    while (current) {
+        if (current == victim) {
+            if (prev) {
+                prev->next = current->next;
+            } else {
+                cache->buckets[index] = current->next;
+            }
+            break;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    destroy_node(victim);
+    cache->size--;
+}
+
+// 在哈希表中查找节点
+static CacheNode *find_node(CacheSystem *cache, const char *key) {
+    if (!cache || !key) return NULL;
+
+    unsigned int index = hash_function(key, cache->bucket_count);
+    CacheNode *current = cache->buckets[index];
+
+    while (current) {
+        if (strcmp(current->key, key) == 0) {
+            return current;
+        }
+        current = current->next;
+    }
+
+    return NULL;
+}
+
+// ========== 测试示例 ==========
+int main() {
+    // 创建缓存：16个桶，最多容纳100项
+    CacheSystem *cache = cache_create(16, 100);
+    if (!cache) {
+        fprintf(stderr, "Failed to create cache\n");
+        return 1;
+    }
+
+    // 插入数据
+    const char *keys[] = {"name", "age", "city", "email", "phone"};
+    const char *values[] = {"Alice", "30", "Beijing", "alice@example.com", "1234567890"};
+
+    printf("Inserting data...\n");
+    for (int i = 0; i < 5; i++) {
+        cache_put(cache, keys[i], values[i], strlen(values[i]) + 1);
+        printf("  Put: %s = %s\n", keys[i], values[i]);
+    }
+
+    cache_print_stats(cache);
+
+    // 读取数据
+    printf("\nReading data...\n");
+    for (int i = 0; i < 5; i++) {
+        size_t size;
+        char *val = (char *)cache_get(cache, keys[i], &size);
+        if (val) {
+            printf("  Get: %s = %s\n", keys[i], val);
+        }
+    }
+
+    // 测试LRU淘汰
+    printf("\nTesting LRU eviction...\n");
+    for (int i = 0; i < 105; i++) {
+        char key[32], value[32];
+        snprintf(key, sizeof(key), "key_%d", i);
+        snprintf(value, sizeof(value), "value_%d", i);
+        cache_put(cache, key, value, strlen(value) + 1);
+    }
+
+    printf("After inserting 110 items (max=100):\n");
+    cache_print_stats(cache);
+
+    // 检查最早插入的键是否被淘汰
+    size_t size;
+    char *val = (char *)cache_get(cache, "name", &size);
+    printf("Key 'name' still exists: %s\n", val ? "YES" : "NO");
+
+    // 删除一个键
+    printf("\nRemoving key 'age'...\n");
+    cache_remove(cache, "age");
+    val = (char *)cache_get(cache, "age", &size);
+    printf("Key 'age' still exists: %s\n", val ? "YES" : "NO");
+
+    cache_print_stats(cache);
+
+    // 清理
+    cache_destroy(cache);
+    printf("\nCache destroyed.\n");
+
+    return 0;
+}
