@@ -1,6 +1,7 @@
 package com.translator.codegen;
 
 import com.translator.ast.*;
+import com.translator.transform.TypeMapper;
 
 /**
  * 代码生成器（CodeGenerator）
@@ -30,7 +31,10 @@ public class CodeGenerator implements AstVisitor<String> {
 
     @Override
     public String visitType(Type node) {
-        return node.getName();
+        if (node instanceof FunctionPointerType) {
+            return visitFunctionPointerType((FunctionPointerType) node);
+        }
+        return TypeMapper.mapType(node);
     }
 
     @Override
@@ -489,6 +493,40 @@ public class CodeGenerator implements AstVisitor<String> {
         
         indentLevel--;
         sb.append("}");
+        return sb.toString();
+    }
+
+    @Override
+    public String visitFunctionPointerType(FunctionPointerType node) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("java.util.function.");
+        String returnTypeName = node.getReturnType().accept(this);
+        int paramCount = node.getParameterCount();
+        
+        if (paramCount == 1 && node.getParameterTypes().get(0).getName().equals("void")) {
+            paramCount = 0;
+        }
+        
+        if (returnTypeName.equals("void")) {
+            switch (paramCount) {
+                case 0: sb.append("Runnable"); break;
+                case 1: sb.append("Consumer"); break;
+                case 2: sb.append("BiConsumer"); break;
+                default: sb.append("Runnable"); break;
+            }
+        } else {
+            switch (paramCount) {
+                case 0: sb.append("Supplier"); break;
+                case 1: sb.append("Function"); break;
+                case 2: sb.append("BiFunction"); break;
+                default: sb.append("Function"); break;
+            }
+        }
+        
+        if (node.isArray()) {
+            sb.append("[]");
+        }
+        
         return sb.toString();
     }
 }

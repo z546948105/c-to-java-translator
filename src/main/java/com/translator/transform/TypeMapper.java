@@ -52,22 +52,14 @@ public class TypeMapper {
         
         if (type.isArray()) {
             if (type.isPointer()) {
-                if (type.getArraySize() != null) {
-                    return "Object[" + type.getArraySize() + "]";
-                } else {
-                    return "Object[]";
-                }
+                return "Object[]";
             }
             
             if (baseType.equals("char")) {
                 return "String";
             }
             
-            if (type.getArraySize() != null) {
-                return baseType + "[" + type.getArraySize() + "]";
-            } else {
-                return baseType + "[]";
-            }
+            return baseType + "[]";
         }
         
         if (type.isPointer()) {

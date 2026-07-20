@@ -202,6 +202,37 @@ public class Parser {
         }
         
         Type type = parseType();
+        
+        if (match(TokenType.LPAREN)) {
+            eat(TokenType.LPAREN);
+            if (match(TokenType.MUL)) {
+                eat(TokenType.MUL);
+                Identifier ptrName = parseIdentifier();
+                eat(TokenType.RPAREN);
+                
+                eat(TokenType.LPAREN);
+                List<Type> paramTypes = new ArrayList<>();
+                if (!match(TokenType.RPAREN)) {
+                    paramTypes.add(parseType());
+                    while (match(TokenType.COMMA)) {
+                        eat(TokenType.COMMA);
+                        paramTypes.add(parseType());
+                    }
+                }
+                eat(TokenType.RPAREN);
+                
+                FunctionPointerType fpType = new FunctionPointerType(type, paramTypes);
+                AstNode initializer = null;
+                if (match(TokenType.ASSIGN)) {
+                    eat(TokenType.ASSIGN);
+                    initializer = parseExpression();
+                }
+                eat(TokenType.SEMICOLON);
+                return new VariableDeclaration(fpType, ptrName, initializer);
+            }
+            eat(TokenType.RPAREN);
+        }
+        
         Identifier name = parseIdentifier();
         if (currentToken.getType() == TokenType.LPAREN) {
             return parseFunctionDeclaration(type, name);
@@ -585,6 +616,35 @@ public class Parser {
     }
 
     private VariableDeclaration parseVariableDeclarationHelper(Type type, Identifier name) {
+        if (match(TokenType.LPAREN)) {
+            eat(TokenType.LPAREN);
+            if (match(TokenType.MUL)) {
+                eat(TokenType.MUL);
+                Identifier ptrName = parseIdentifier();
+                eat(TokenType.RPAREN);
+                
+                eat(TokenType.LPAREN);
+                java.util.List<Type> paramTypes = new java.util.ArrayList<>();
+                if (!match(TokenType.RPAREN)) {
+                    paramTypes.add(parseType());
+                    while (match(TokenType.COMMA)) {
+                        eat(TokenType.COMMA);
+                        paramTypes.add(parseType());
+                    }
+                }
+                eat(TokenType.RPAREN);
+                
+                FunctionPointerType fpType = new FunctionPointerType(type, paramTypes);
+                AstNode initializer = null;
+                if (match(TokenType.ASSIGN)) {
+                    eat(TokenType.ASSIGN);
+                    initializer = parseExpression();
+                }
+                return new VariableDeclaration(fpType, ptrName, initializer);
+            }
+            eat(TokenType.RPAREN);
+        }
+        
         while (match(TokenType.MUL)) {
             eat(TokenType.MUL);
             type = new Type(type.getName(), type.getPointerLevel() + 1, false, null);
@@ -721,6 +781,51 @@ public class Parser {
             }
         } else if (matchAny(TokenType.INT, TokenType.LONG, TokenType.SHORT, TokenType.CHAR, TokenType.FLOAT, TokenType.DOUBLE, TokenType.VOID, TokenType.BOOL, TokenType.SIZE_T, TokenType.UNSIGNED, TokenType.CONST)) {
             Type type = parseType();
+            
+            if (match(TokenType.LPAREN)) {
+                eat(TokenType.LPAREN);
+                if (match(TokenType.MUL)) {
+                    eat(TokenType.MUL);
+                    Identifier ptrName = parseIdentifier();
+                    
+                    boolean isArray = false;
+                    Integer arraySize = null;
+                    if (match(TokenType.LBRACKET)) {
+                        eat(TokenType.LBRACKET);
+                        isArray = true;
+                        if (match(TokenType.NUMBER)) {
+                            arraySize = Integer.parseInt(currentToken.getValue());
+                            eat(TokenType.NUMBER);
+                        }
+                        eat(TokenType.RBRACKET);
+                    }
+                    
+                    eat(TokenType.RPAREN);
+                    
+                    eat(TokenType.LPAREN);
+                    List<Type> paramTypes = new ArrayList<>();
+                    if (!match(TokenType.RPAREN)) {
+                        paramTypes.add(parseType());
+                        while (match(TokenType.COMMA)) {
+                            eat(TokenType.COMMA);
+                            paramTypes.add(parseType());
+                        }
+                    }
+                    eat(TokenType.RPAREN);
+                    
+                    FunctionPointerType fpType = new FunctionPointerType(type, paramTypes, isArray, arraySize);
+                    
+                    AstNode initializer = null;
+                    if (match(TokenType.ASSIGN)) {
+                        eat(TokenType.ASSIGN);
+                        initializer = parseExpression();
+                    }
+                    eat(TokenType.SEMICOLON);
+                    return new VariableDeclaration(fpType, ptrName, initializer);
+                }
+                eat(TokenType.RPAREN);
+            }
+            
             Identifier name = parseIdentifier();
             if (match(TokenType.LPAREN)) {
                 return parseFunctionDeclaration(type, name);

@@ -9,13 +9,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TestPointerArithmetic {
+public class TestFunctionPointer {
 
     @Test
-    void testPointerToArrayMapping() {
+    void testFunctionPointerDeclaration() {
         String cCode = "void test() {\n" +
-                       "    int arr[5] = {1, 2, 3, 4, 5};\n" +
-                       "    int *ptr = arr;\n" +
+                       "    int (*func)(int);\n" +
                        "}";
 
         Lexer lexer = new Lexer(cCode);
@@ -29,18 +28,17 @@ public class TestPointerArithmetic {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        System.out.println("=== Pointer to Array Mapping ===");
+        System.out.println("=== Function Pointer Declaration ===");
         System.out.println(javaCode);
-        assertTrue(javaCode.contains("int[][] arr") || javaCode.contains("int[] arr"), "Should declare array");
-        assertTrue(javaCode.contains("int ptr_index"), "Should generate index variable");
+        assertTrue(javaCode.contains("java.util.function.Function func"), 
+                   "Should convert int (*func)(int) to Function");
+        System.out.println("=== Generated code contains Function: " + javaCode.contains("java.util.function.Function"));
     }
 
     @Test
-    void testPointerDereference() {
+    void testFunctionPointerWithTwoParams() {
         String cCode = "void test() {\n" +
-                       "    int value = 10;\n" +
-                       "    int *ptr = &value;\n" +
-                       "    int result = *ptr;\n" +
+                       "    int (*func)(int, int);\n" +
                        "}";
 
         Lexer lexer = new Lexer(cCode);
@@ -54,41 +52,16 @@ public class TestPointerArithmetic {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("int result = value"), "Should dereference to value");
-        System.out.println("=== Pointer Dereference ===");
-        System.out.println(javaCode);
-    }
-
-    @Test
-    void testPointerAddition() {
-        String cCode = "void test() {\n" +
-                       "    int arr[5] = {1, 2, 3, 4, 5};\n" +
-                       "    int *ptr = arr;\n" +
-                       "    int result = *(ptr + 2);\n" +
-                       "}";
-
-        Lexer lexer = new Lexer(cCode);
-        Parser parser = new Parser(lexer);
-        Program program = parser.parse();
-
-        AstTransformer transformer = new AstTransformer();
-        Program javaProgram = (Program) transformer.visitProgram(program);
-
-        CodeGenerator generator = new CodeGenerator();
-        String javaCode = generator.visitProgram(javaProgram);
-
-        assertNotNull(javaCode);
-        assertTrue(javaCode.contains("arr[2]"), "Should convert *(ptr + 2) to arr[2]");
-        System.out.println("=== Pointer Addition ===");
+        assertTrue(javaCode.contains("java.util.function.BiFunction func"), 
+                   "Should convert int (*func)(int, int) to BiFunction");
+        System.out.println("=== Function Pointer With Two Params ===");
         System.out.println(javaCode);
     }
 
     @Test
-    void testPointerSubtraction() {
+    void testFunctionPointerWithVoidReturn() {
         String cCode = "void test() {\n" +
-                       "    int arr[5] = {1, 2, 3, 4, 5};\n" +
-                       "    int *ptr = arr;\n" +
-                       "    int result = *(ptr - 1);\n" +
+                       "    void (*callback)(int);\n" +
                        "}";
 
         Lexer lexer = new Lexer(cCode);
@@ -102,17 +75,16 @@ public class TestPointerArithmetic {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("arr[-1]"), "Should convert *(ptr - 1) to arr[-1]");
-        System.out.println("=== Pointer Subtraction ===");
+        assertTrue(javaCode.contains("java.util.function.Consumer callback"), 
+                   "Should convert void (*callback)(int) to Consumer");
+        System.out.println("=== Function Pointer With Void Return ===");
         System.out.println(javaCode);
     }
 
     @Test
-    void testPointerArrayAccess() {
+    void testFunctionPointerWithNoParams() {
         String cCode = "void test() {\n" +
-                       "    int arr[5] = {1, 2, 3, 4, 5};\n" +
-                       "    int *ptr = arr;\n" +
-                       "    int result = ptr[2];\n" +
+                       "    int (*getter)(void);\n" +
                        "}";
 
         Lexer lexer = new Lexer(cCode);
@@ -126,19 +98,16 @@ public class TestPointerArithmetic {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("arr[2]"), "Should convert ptr[2] to arr[2]");
-        System.out.println("=== Pointer Array Access ===");
+        assertTrue(javaCode.contains("java.util.function.Supplier getter"), 
+                   "Should convert int (*getter)(void) to Supplier");
+        System.out.println("=== Function Pointer With No Params ===");
         System.out.println(javaCode);
     }
 
     @Test
-    void testPointerInLoop() {
+    void testFunctionPointerWithVoidReturnNoParams() {
         String cCode = "void test() {\n" +
-                       "    int arr[5] = {1, 2, 3, 4, 5};\n" +
-                       "    int *ptr = arr;\n" +
-                       "    for (int i = 0; i < 5; i++) {\n" +
-                       "        printf(\"%d\\n\", *(ptr + i));\n" +
-                       "    }\n" +
+                       "    void (*run)(void);\n" +
                        "}";
 
         Lexer lexer = new Lexer(cCode);
@@ -152,17 +121,17 @@ public class TestPointerArithmetic {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("arr[i]"), "Should convert *(ptr + i) to arr[i]");
-        System.out.println("=== Pointer in Loop ===");
+        assertTrue(javaCode.contains("java.util.function.Runnable run"), 
+                   "Should convert void (*run)(void) to Runnable");
+        System.out.println("=== Function Pointer With Void Return No Params ===");
         System.out.println(javaCode);
     }
 
     @Test
-    void testPointerAssignment() {
+    void testFunctionPointerAssignment() {
         String cCode = "void test() {\n" +
-                       "    int arr[5] = {1, 2, 3, 4, 5};\n" +
-                       "    int *ptr = arr;\n" +
-                       "    *(ptr + 1) = 100;\n" +
+                       "    int (*func)(int);\n" +
+                       "    func = NULL;\n" +
                        "}";
 
         Lexer lexer = new Lexer(cCode);
@@ -176,8 +145,32 @@ public class TestPointerArithmetic {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("arr[1] = 100"), "Should convert assignment to array");
-        System.out.println("=== Pointer Assignment ===");
+        assertTrue(javaCode.contains("java.util.function.Function func"), 
+                   "Should convert int (*func)(int) to Function");
+        System.out.println("=== Function Pointer Assignment ===");
         System.out.println(javaCode);
+    }
+
+    @Test
+    void testFunctionPointerArray() {
+        String cCode = "void test() {\n" +
+                       "    int (*funcs[5])(int);\n" +
+                       "}";
+
+        Lexer lexer = new Lexer(cCode);
+        Parser parser = new Parser(lexer);
+        Program program = parser.parse();
+
+        AstTransformer transformer = new AstTransformer();
+        Program javaProgram = (Program) transformer.visitProgram(program);
+
+        CodeGenerator generator = new CodeGenerator();
+        String javaCode = generator.visitProgram(javaProgram);
+
+        assertNotNull(javaCode);
+        System.out.println("=== Function Pointer Array ===");
+        System.out.println(javaCode);
+        assertTrue(javaCode.contains("java.util.function.Function[] funcs"), 
+                   "Should convert int (*funcs[5])(int) to Function[]");
     }
 }

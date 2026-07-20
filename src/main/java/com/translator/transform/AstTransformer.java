@@ -103,6 +103,9 @@ public class AstTransformer implements AstVisitor<AstNode> {
 
     @Override
     public AstNode visitType(Type node) {
+        if (node instanceof FunctionPointerType) {
+            return visitFunctionPointerType((FunctionPointerType) node);
+        }
         String javaTypeName = TypeMapper.mapType(node);
         return new Type(javaTypeName, node.getPointerLevel(), node.isArray(), node.getArraySize());
     }
@@ -560,5 +563,42 @@ public class AstTransformer implements AstVisitor<AstNode> {
                 javaParams,
                 methodBody
         );
+    }
+
+    @Override
+    public AstNode visitFunctionPointerType(FunctionPointerType node) {
+        Type javaReturnType = (Type) node.getReturnType().accept(this);
+        String returnTypeName = javaReturnType.getName();
+        
+        int paramCount = node.getParameterCount();
+        
+        if (paramCount == 1 && node.getParameterTypes().get(0).getName().equals("void")) {
+            paramCount = 0;
+        }
+        
+        String functionalInterfaceName = getFunctionalInterfaceName(returnTypeName, paramCount);
+        
+        if (node.isArray()) {
+            return new Type(functionalInterfaceName, 0, true, node.getArraySize());
+        }
+        return new Type(functionalInterfaceName);
+    }
+    
+    private String getFunctionalInterfaceName(String returnType, int paramCount) {
+        if (returnType.equals("void")) {
+            switch (paramCount) {
+                case 0: return "java.util.function.Runnable";
+                case 1: return "java.util.function.Consumer";
+                case 2: return "java.util.function.BiConsumer";
+                default: return "java.util.function.Runnable";
+            }
+        } else {
+            switch (paramCount) {
+                case 0: return "java.util.function.Supplier";
+                case 1: return "java.util.function.Function";
+                case 2: return "java.util.function.BiFunction";
+                default: return "java.util.function.Function";
+            }
+        }
     }
 }

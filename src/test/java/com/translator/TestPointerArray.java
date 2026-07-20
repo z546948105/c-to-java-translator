@@ -28,7 +28,7 @@ public class TestPointerArray {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("Object[10] arr"), "Should convert int* arr[10] to Object[10] arr");
+        assertTrue(javaCode.contains("Object[] arr"), "Should convert int* arr[10] to Object[] arr");
         System.out.println("=== Pointer Array Declaration ===");
         System.out.println(javaCode);
     }
@@ -72,7 +72,7 @@ public class TestPointerArray {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("Object[5] arr"), "Should convert int** arr[5] to Object[5] arr");
+        assertTrue(javaCode.contains("Object[] arr"), "Should convert int** arr[5] to Object[] arr");
         System.out.println("=== Double Pointer Array ===");
         System.out.println(javaCode);
     }
@@ -94,7 +94,7 @@ public class TestPointerArray {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("Object[3] names"), "Should convert char* names[3] to Object[3] names");
+        assertTrue(javaCode.contains("Object[] names"), "Should convert char* names[3] to Object[] names");
         System.out.println("=== Char Pointer Array ===");
         System.out.println(javaCode);
     }
@@ -118,7 +118,7 @@ public class TestPointerArray {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("Object[2] arr"), "Should convert int* arr[2] to Object[2] arr");
+        assertTrue(javaCode.contains("Object[] arr"), "Should convert int* arr[2] to Object[] arr");
         System.out.println("=== Pointer Array With Initialization ===");
         System.out.println(javaCode);
     }

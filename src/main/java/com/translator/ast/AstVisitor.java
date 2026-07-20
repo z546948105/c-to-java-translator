@@ -43,4 +43,5 @@ public interface AstVisitor<T> {
     T visitComment(Comment node);
     T visitUnsupportedCode(UnsupportedCode node);
     T visitMacroDeclaration(MacroDeclaration node);
+    T visitFunctionPointerType(FunctionPointerType node);
 }
