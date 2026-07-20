@@ -384,7 +384,7 @@ The visitor pattern allows easy extension:
 
 | 缺陷 | 描述 | 影响 |
 |------|------|------|
-| 指针算术 | 部分支持：`*(ptr + i)`、`*(ptr - i)`、`ptr[i]` 已支持，`ptr++`、`++ptr` 尚未支持 | 部分数组遍历代码无法转换 |
+| 指针算术 | 已支持：`*(ptr + i)`、`*(ptr - i)`、`ptr[i]`、`ptr++`、`++ptr`、`ptr--`、`--ptr` | 大部分数组遍历代码可转换 |
 | 指针数组 | 不支持 `int* arr[10]` 等指针数组 | 数组指针转换失败 |
 | 函数指针 | 部分支持，但转换语义不完整 | 回调函数和函数表无法正确转换 |
 
@@ -396,16 +396,15 @@ int *ptr = arr;
 int result1 = *(ptr + 2);   // → arr[2]
 int result2 = *(ptr - 1);   // → arr[-1]
 int result3 = ptr[2];       // → arr[2]
+int result4 = *ptr++;       // → arr[ptr_index++]
+int result5 = *++ptr;       // → arr[++ptr_index]
 *(ptr + i) = 100;           // → arr[i] = 100
 ```
 
 **典型失败案例**：
 ```c
 // 无法正确转换的代码
-int *ptr = arr;
-while (*ptr != 0) {
-    printf("%d\n", *ptr++);  // ptr++ 不支持
-}
+int* arr[10];               // 指针数组不支持
 ```
 
 #### 2. 宏处理能力有限
@@ -455,7 +454,7 @@ int area = PI * r * r;      // PI 被忽略
 |--------|----------|--------|------|
 | 多级指针转换 | 使用 Java 数组模拟多级指针，如 `int**` → `int[][]` | 中 | ✅ 已实现 |
 | 指针算术支持 | 在 AstTransformer 中添加指针偏移量跟踪，将 `*(ptr + i)`、`*(ptr - i)`、`ptr[i]` 转换为 `arr[i]` | 高 | ✅ 已实现 |
-| 指针自增/自减 | 支持 `ptr++`、`++ptr`、`ptr--`、`--ptr` 的转换 | 高 | ⏳ 待实现 |
+| 指针自增/自减 | 支持 `ptr++`、`++ptr`、`ptr--`、`--ptr` 的转换，使用索引变量模拟指针移动 | 高 | ✅ 已实现 |
 | 指针数组支持 | 添加 PointerArrayType AST 节点，转换为 `Object[]` | 中 | ⏳ 待实现 |
 | 函数指针转换 | 将函数指针映射为 Java 函数式接口（如 `Function`, `BiFunction`） | 低 | ⏳ 待实现 |
 
@@ -464,9 +463,14 @@ int area = PI * r * r;      // PI 被忽略
 - `*(ptr - i)` → `arr[-i]` （减法偏移）
 - `ptr[i]` → `arr[i]` （数组索引方式）
 - `*(ptr + i) = value` → `arr[i] = value` （指针赋值）
+- `*ptr++` → `arr[ptr_index++]` （后缀自增）
+- `*++ptr` → `arr[++ptr_index]` （前缀自增）
+- `*ptr--` → `arr[ptr_index--]` （后缀自减）
+- `*--ptr` → `arr[--ptr_index]` （前缀自减）
+- `ptr++` / `--ptr` → `ptr_index++` / `--ptr_index` （单独语句）
 
-**代码修改建议**：
-- 在 [AstTransformer.java](src/main/java/com/translator/transform/AstTransformer.java) 的 `visitUnaryExpression` 中添加 `ptr++`、`++ptr` 的处理
+**实现原理**：
+当指针指向数组时，创建对应的索引变量（如 `ptr_index`），通过维护索引变量来模拟指针的移动。`int *ptr = arr;` 转换为 `int ptr_index = 0;`，后续的指针操作通过索引变量实现。
 
 #### 2. 宏处理改进
 
@@ -577,7 +581,7 @@ int area = PI * r * r;      // PI 被忽略
 
 **Phase 2 - 核心能力增强（进行中）**
 1. ✅ 实现指针算术支持（`*(ptr + i)`、`*(ptr - i)`、`ptr[i]`）
-2. ⏳ 指针自增/自减支持（`ptr++`、`++ptr`）
+2. ✅ 指针自增/自减支持（`ptr++`、`++ptr`、`ptr--`、`--ptr`）
 3. ⏳ 添加宏展开器
 4. ⏳ 扩展标准库函数映射
 
