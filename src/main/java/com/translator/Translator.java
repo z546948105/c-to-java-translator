@@ -3,6 +3,7 @@ package com.translator;
 import com.translator.ast.Program;
 import com.translator.codegen.CodeGenerator;
 import com.translator.parser.Parser;
+import com.translator.preprocessor.Preprocessor;
 import com.translator.token.Lexer;
 import com.translator.transform.AstTransformer;
 import org.slf4j.Logger;
@@ -24,14 +25,18 @@ public class Translator {
     private final CodeGenerator codeGenerator;
 
     public Translator(String cCode) {
-        this.lexer = new Lexer(cCode);
+        Preprocessor preprocessor = new Preprocessor();
+        String preprocessedCode = preprocessor.preprocess(cCode);
+        this.lexer = new Lexer(preprocessedCode);
         this.parser = new Parser(lexer);
         this.transformer = new AstTransformer();
         this.codeGenerator = new CodeGenerator();
     }
 
     public Translator(String cCode, String className) {
-        this.lexer = new Lexer(cCode);
+        Preprocessor preprocessor = new Preprocessor();
+        String preprocessedCode = preprocessor.preprocess(cCode);
+        this.lexer = new Lexer(preprocessedCode);
         this.parser = new Parser(lexer);
         this.transformer = new AstTransformer(className);
         this.codeGenerator = new CodeGenerator();

@@ -1,79 +1,60 @@
 package com.translator;
 
-import com.translator.ast.Program;
-import com.translator.codegen.CodeGenerator;
-import com.translator.parser.Parser;
-import com.translator.token.Lexer;
-import com.translator.transform.AstTransformer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * 宏转换测试类
+ * <p>
+ * 验证宏在预处理阶段展开后的代码行为
+ */
 public class TestMacroTransformation {
 
     @Test
     void testSimpleMacroFunction() {
-        String cCode = "#define MAX(a,b) ((a) > (b) ? (a) : (b))\n";
+        String cCode = "#define MAX(a,b) ((a) > (b) ? (a) : (b))\n" +
+                       "int test() {\n" +
+                       "    return MAX(10, 20);\n" +
+                       "}";
 
-        Lexer lexer = new Lexer(cCode);
-        Parser parser = new Parser(lexer);
-
-        Program program = parser.parse();
-
-        AstTransformer transformer = new AstTransformer();
-        Program javaProgram = (Program) transformer.visitProgram(program);
-
-        CodeGenerator generator = new CodeGenerator();
-        String javaCode = generator.visitProgram(javaProgram);
+        String javaCode = Translator.translateCode(cCode);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("public static int max"), "Should generate static method");
-        assertTrue(javaCode.contains("int a"), "Should have parameter a");
-        assertTrue(javaCode.contains("int b"), "Should have parameter b");
+        assertTrue(javaCode.contains("return"), "Should have return statement");
+        assertTrue(javaCode.contains(">"), "Should have comparison");
         System.out.println("=== Simple Macro Function ===");
         System.out.println(javaCode);
     }
 
     @Test
     void testMacroWithMultipleParams() {
-        String cCode = "#define ADD(a,b,c) ((a) + (b) + (c))\n";
+        String cCode = "#define ADD(a,b,c) ((a) + (b) + (c))\n" +
+                       "int test() {\n" +
+                       "    return ADD(1, 2, 3);\n" +
+                       "}";
 
-        Lexer lexer = new Lexer(cCode);
-        Parser parser = new Parser(lexer);
-
-        Program program = parser.parse();
-
-        AstTransformer transformer = new AstTransformer();
-        Program javaProgram = (Program) transformer.visitProgram(program);
-
-        CodeGenerator generator = new CodeGenerator();
-        String javaCode = generator.visitProgram(javaProgram);
+        String javaCode = Translator.translateCode(cCode);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("int a"), "Should have parameter a");
-        assertTrue(javaCode.contains("int b"), "Should have parameter b");
-        assertTrue(javaCode.contains("int c"), "Should have parameter c");
+        assertTrue(javaCode.contains("return"), "Should have return statement");
+        assertTrue(javaCode.contains("+"), "Should have addition");
         System.out.println("=== Macro With Multiple Params ===");
         System.out.println(javaCode);
     }
 
     @Test
     void testMacroWithExpression() {
-        String cCode = "#define SQUARE(x) ((x) * (x))\n";
+        String cCode = "#define SQUARE(x) ((x) * (x))\n" +
+                       "int test() {\n" +
+                       "    return SQUARE(5);\n" +
+                       "}";
 
-        Lexer lexer = new Lexer(cCode);
-        Parser parser = new Parser(lexer);
-
-        Program program = parser.parse();
-
-        AstTransformer transformer = new AstTransformer();
-        Program javaProgram = (Program) transformer.visitProgram(program);
-
-        CodeGenerator generator = new CodeGenerator();
-        String javaCode = generator.visitProgram(javaProgram);
+        String javaCode = Translator.translateCode(cCode);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("return ((x)") && javaCode.contains("*") && javaCode.contains("(x))"), "Should have correct return expression");
+        assertTrue(javaCode.contains("return"), "Should have return statement");
+        assertTrue(javaCode.contains("*"), "Should have multiplication");
         System.out.println("=== Macro With Expression ===");
         System.out.println(javaCode);
     }

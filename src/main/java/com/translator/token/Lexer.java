@@ -139,24 +139,13 @@ public class Lexer {
         }
 
         if (currentChar == '#') {
-            readNextChar();
-            skipWhitespace();
-            StringBuilder sb = new StringBuilder();
-            while (currentChar != -1 && Character.isLetter(currentChar)) {
-                sb.append((char) currentChar);
+            while (currentChar != -1 && currentChar != '\n') {
                 readNextChar();
             }
-            if (sb.toString().equals("define")) {
-                return new Token(TokenType.DEFINE, "define", line, column);
-            } else {
-                while (currentChar != -1 && currentChar != '\n') {
-                    readNextChar();
-                }
-                if (currentChar == '\n') {
-                    readNextChar();
-                }
-                return nextToken();
+            if (currentChar == '\n') {
+                readNextChar();
             }
+            return nextToken();
         }
 
         if (Character.isLetter(currentChar) || currentChar == '_') {

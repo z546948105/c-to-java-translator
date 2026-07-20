@@ -4,10 +4,10 @@ A C language to Java language translator tool designed for domestic software mig
 
 ## Architecture Overview
 
-The translator follows a classic compiler frontend architecture:
+The translator follows a classic compiler frontend architecture with a preprocessing phase:
 
 ```
-C Source Code → Lexer → Token Stream → Parser → C AST → AstTransformer → Java AST → CodeGenerator → Java Code
+C Source Code → Preprocessor → Preprocessed Code → Lexer → Token Stream → Parser → C AST → AstTransformer → Java AST → CodeGenerator → Java Code
 ```
 
 ### Component Diagram
@@ -17,11 +17,18 @@ C Source Code → Lexer → Token Stream → Parser → C AST → AstTransformer
 │                           C to Java Translator                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   ┌─────────┐     ┌─────────┐     ┌──────────┐     ┌──────────────────┐    │
-│   │  Lexer  │ ──► │  Parser │ ──► │ C AST    │ ──► │ AstTransformer   │    │
-│   │         │     │         │     │          │     │                  │    │
-│   │ 词法分析 │     │ 语法分析 │     │ 抽象语法树 │     │ 语义分析+AST转换 │    │
-│   └─────────┘     └─────────┘     └──────────┘     └────────┬─────────┘    │
+│   ┌───────────────┐     ┌─────────┐     ┌─────────┐     ┌──────────┐      │
+│   │ Preprocessor  │ ──► │  Lexer  │ ──► │  Parser │ ──► │ C AST    │      │
+│   │               │     │         │     │         │     │          │      │
+│   │   预处理阶段   │     │ 词法分析 │     │ 语法分析 │     │ 抽象语法树 │      │
+│   └───────────────┘     └─────────┘     └─────────┘     └──────────┘      │
+│                                                                  │        │
+│                                                                  ▼        │
+│                                                      ┌──────────────────┐  │
+│                                                      │ AstTransformer   │  │
+│                                                      │                  │  │
+│                                                      │  语义分析+AST转换 │  │
+│                                                      └────────┬─────────┘  │
 │                                                             │              │
 │                                                             ▼              │
 │                                                      ┌───────────┐         │
@@ -45,17 +52,36 @@ C Source Code → Lexer → Token Stream → Parser → C AST → AstTransformer
 
 ## Core Components
 
+### 0. Preprocessor (预处理器)
+
+**Location**: `src/main/java/com/translator/preprocessor/Preprocessor.java`
+
+**Responsibility**: Processes C source code before lexer, performing macro expansion.
+
+**Supported Features**:
+- Object macros (无参数宏): `#define MAX 100` → expanded to `100`
+- Function macros (有参数宏): `#define ADD(a,b) (a+b)` → expanded with parameter substitution
+- Nested macro expansion: Macros can reference other macros
+- Recursive macro prevention: Prevents infinite recursion during expansion
+- String literal preservation: Macros inside strings are not expanded
+
+**Macro Expansion Rules**:
+- Object macros are replaced with their body text
+- Function macro parameters are substituted with actual arguments
+- Parameters are replaced as whole words only (word boundary check)
+- Macro expansion is applied recursively until no more macros are found
+
 ### 1. Lexer (词法分析器)
 
 **Location**: `src/main/java/com/translator/token/Lexer.java`
 
-**Responsibility**: Converts raw C source code into a stream of tokens.
+**Responsibility**: Converts preprocessed C source code into a stream of tokens.
 
 **Supported Features**:
 - Keywords: `int`, `long`, `short`, `char`, `float`, `double`, `void`, `bool`, `struct`, `typedef`, `enum`, `union`, `const`, `unsigned`, `static`, `sizeof`
 - Operators: Arithmetic, comparison, logical, bitwise, compound assignment
 - Literals: Strings, characters, numbers (decimal, hexadecimal, binary)
-- Preprocessor directives: Handles `#define` for macro parsing
+- Preprocessor directives: Skips `#` directives (processed by Preprocessor)
 
 ### 2. Parser (语法分析器)
 
@@ -74,7 +100,6 @@ C Source Code → Lexer → Token Stream → Parser → C AST → AstTransformer
 - Arrays and array access
 - Type casting
 - Function calls
-- Macro declarations (`#define` function macros)
 
 ### 3. AST (抽象语法树)
 
@@ -89,7 +114,6 @@ C Source Code → Lexer → Token Stream → Parser → C AST → AstTransformer
 - `StructDeclaration`: Struct type with fields
 - `EnumDeclaration`: Enum type with values
 - `TypedefDeclaration`: Type alias definition
-- `MacroDeclaration`: Macro definition (function macros)
 - `Block`: Sequence of statements
 - `ExpressionStatement`: Expression as statement
 - `IfStatement`: Conditional branch
@@ -503,7 +527,7 @@ int area = PI * r * r;      // PI 被忽略
 | 改进项 | 实现方法 | 优先级 | 状态 |
 |--------|----------|--------|------|
 | 宏函数转换 | 将宏函数转换为 Java 静态方法 | 中 | ✅ 已实现 |
-| 宏展开器 | 实现预处理阶段，在 Lexer 之前进行宏展开 | 高 | ⏳ 待实现 |
+| 宏展开器 | 实现预处理阶段，在 Lexer 之前进行宏展开 | 高 | ✅ 已实现 |
 | 条件编译处理 | 添加条件编译解析器，根据条件选择性包含代码 | 中 | ⏳ 待实现 |
 
 **代码修改建议**：
@@ -607,7 +631,7 @@ int area = PI * r * r;      // PI 被忽略
 1. ✅ 实现指针算术支持（`*(ptr + i)`、`*(ptr - i)`、`ptr[i]`）
 2. ✅ 指针自增/自减支持（`ptr++`、`++ptr`、`ptr--`、`--ptr`）
 3. ✅ 函数指针支持（映射为 Java 函数式接口）
-4. ⏳ 添加宏展开器
+4. ✅ 添加宏展开器
 5. ⏳ 扩展标准库函数映射
 
 **Phase 3 - 质量与性能（待启动）**
