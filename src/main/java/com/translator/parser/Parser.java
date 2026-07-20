@@ -1060,6 +1060,14 @@ public class Parser {
             eat(currentToken.getType());
             AstNode operand = parseUnary();
             return new UnaryExpression(operator, operand);
+        } else if (match(TokenType.INC)) {
+            eat(TokenType.INC);
+            AstNode operand = parsePostfix();
+            return new UnaryExpression("++", operand, false);
+        } else if (match(TokenType.DEC)) {
+            eat(TokenType.DEC);
+            AstNode operand = parsePostfix();
+            return new UnaryExpression("--", operand, false);
         }
         return parsePostfix();
     }

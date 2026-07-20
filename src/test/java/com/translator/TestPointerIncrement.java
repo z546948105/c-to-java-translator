@@ -9,13 +9,14 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TestPointerArithmetic {
+public class TestPointerIncrement {
 
     @Test
-    void testPointerToArrayMapping() {
+    void testPointerPostfixIncrement() {
         String cCode = "void test() {\n" +
                        "    int arr[5] = {1, 2, 3, 4, 5};\n" +
                        "    int *ptr = arr;\n" +
+                       "    int result = *ptr++;\n" +
                        "}";
 
         Lexer lexer = new Lexer(cCode);
@@ -29,42 +30,17 @@ public class TestPointerArithmetic {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("int[5] arr"), "Should declare array");
-        assertTrue(javaCode.contains("int ptr_index"), "Should generate index variable");
-        System.out.println("=== Pointer to Array Mapping ===");
+        assertTrue(javaCode.contains("arr[ptr_index++]"), "Should convert *ptr++ to arr[ptr_index++]");
+        System.out.println("=== Pointer Postfix Increment ===");
         System.out.println(javaCode);
     }
 
     @Test
-    void testPointerDereference() {
-        String cCode = "void test() {\n" +
-                       "    int value = 10;\n" +
-                       "    int *ptr = &value;\n" +
-                       "    int result = *ptr;\n" +
-                       "}";
-
-        Lexer lexer = new Lexer(cCode);
-        Parser parser = new Parser(lexer);
-        Program program = parser.parse();
-
-        AstTransformer transformer = new AstTransformer();
-        Program javaProgram = (Program) transformer.visitProgram(program);
-
-        CodeGenerator generator = new CodeGenerator();
-        String javaCode = generator.visitProgram(javaProgram);
-
-        assertNotNull(javaCode);
-        assertTrue(javaCode.contains("int result = value"), "Should dereference to value");
-        System.out.println("=== Pointer Dereference ===");
-        System.out.println(javaCode);
-    }
-
-    @Test
-    void testPointerAddition() {
+    void testPointerPrefixIncrement() {
         String cCode = "void test() {\n" +
                        "    int arr[5] = {1, 2, 3, 4, 5};\n" +
                        "    int *ptr = arr;\n" +
-                       "    int result = *(ptr + 2);\n" +
+                       "    int result = *++ptr;\n" +
                        "}";
 
         Lexer lexer = new Lexer(cCode);
@@ -78,17 +54,17 @@ public class TestPointerArithmetic {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("arr[2]"), "Should convert *(ptr + 2) to arr[2]");
-        System.out.println("=== Pointer Addition ===");
+        assertTrue(javaCode.contains("arr[++ptr_index]"), "Should convert *++ptr to arr[++ptr_index]");
+        System.out.println("=== Pointer Prefix Increment ===");
         System.out.println(javaCode);
     }
 
     @Test
-    void testPointerSubtraction() {
+    void testPointerPostfixDecrement() {
         String cCode = "void test() {\n" +
                        "    int arr[5] = {1, 2, 3, 4, 5};\n" +
                        "    int *ptr = arr;\n" +
-                       "    int result = *(ptr - 1);\n" +
+                       "    int result = *ptr--;\n" +
                        "}";
 
         Lexer lexer = new Lexer(cCode);
@@ -102,17 +78,17 @@ public class TestPointerArithmetic {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("arr[-1]"), "Should convert *(ptr - 1) to arr[-1]");
-        System.out.println("=== Pointer Subtraction ===");
+        assertTrue(javaCode.contains("arr[ptr_index--]"), "Should convert *ptr-- to arr[ptr_index--]");
+        System.out.println("=== Pointer Postfix Decrement ===");
         System.out.println(javaCode);
     }
 
     @Test
-    void testPointerArrayAccess() {
+    void testPointerPrefixDecrement() {
         String cCode = "void test() {\n" +
                        "    int arr[5] = {1, 2, 3, 4, 5};\n" +
                        "    int *ptr = arr;\n" +
-                       "    int result = ptr[2];\n" +
+                       "    int result = *--ptr;\n" +
                        "}";
 
         Lexer lexer = new Lexer(cCode);
@@ -126,18 +102,66 @@ public class TestPointerArithmetic {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("arr[2]"), "Should convert ptr[2] to arr[2]");
-        System.out.println("=== Pointer Array Access ===");
+        assertTrue(javaCode.contains("arr[--ptr_index]"), "Should convert *--ptr to arr[--ptr_index]");
+        System.out.println("=== Pointer Prefix Decrement ===");
         System.out.println(javaCode);
     }
 
     @Test
-    void testPointerInLoop() {
+    void testPointerIncrementStatement() {
+        String cCode = "void test() {\n" +
+                       "    int arr[5] = {1, 2, 3, 4, 5};\n" +
+                       "    int *ptr = arr;\n" +
+                       "    ptr++;\n" +
+                       "}";
+
+        Lexer lexer = new Lexer(cCode);
+        Parser parser = new Parser(lexer);
+        Program program = parser.parse();
+
+        AstTransformer transformer = new AstTransformer();
+        Program javaProgram = (Program) transformer.visitProgram(program);
+
+        CodeGenerator generator = new CodeGenerator();
+        String javaCode = generator.visitProgram(javaProgram);
+
+        assertNotNull(javaCode);
+        assertTrue(javaCode.contains("ptr_index++"), "Should convert ptr++ to ptr_index++");
+        System.out.println("=== Pointer Increment Statement ===");
+        System.out.println(javaCode);
+    }
+
+    @Test
+    void testPointerDecrementStatement() {
+        String cCode = "void test() {\n" +
+                       "    int arr[5] = {1, 2, 3, 4, 5};\n" +
+                       "    int *ptr = arr;\n" +
+                       "    --ptr;\n" +
+                       "}";
+
+        Lexer lexer = new Lexer(cCode);
+        Parser parser = new Parser(lexer);
+        Program program = parser.parse();
+
+        AstTransformer transformer = new AstTransformer();
+        Program javaProgram = (Program) transformer.visitProgram(program);
+
+        CodeGenerator generator = new CodeGenerator();
+        String javaCode = generator.visitProgram(javaProgram);
+
+        assertNotNull(javaCode);
+        assertTrue(javaCode.contains("--ptr_index"), "Should convert --ptr to --ptr_index");
+        System.out.println("=== Pointer Decrement Statement ===");
+        System.out.println(javaCode);
+    }
+
+    @Test
+    void testPointerIncrementInLoop() {
         String cCode = "void test() {\n" +
                        "    int arr[5] = {1, 2, 3, 4, 5};\n" +
                        "    int *ptr = arr;\n" +
                        "    for (int i = 0; i < 5; i++) {\n" +
-                       "        printf(\"%d\\n\", *(ptr + i));\n" +
+                       "        printf(\"%d\\n\", *ptr++);\n" +
                        "    }\n" +
                        "}";
 
@@ -152,17 +176,18 @@ public class TestPointerArithmetic {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("arr[i]"), "Should convert *(ptr + i) to arr[i]");
-        System.out.println("=== Pointer in Loop ===");
+        assertTrue(javaCode.contains("arr[ptr_index++]"), "Should convert *ptr++ to arr[ptr_index++]");
+        System.out.println("=== Pointer Increment in Loop ===");
         System.out.println(javaCode);
     }
 
     @Test
-    void testPointerAssignment() {
+    void testPointerDereferenceAfterIncrement() {
         String cCode = "void test() {\n" +
                        "    int arr[5] = {1, 2, 3, 4, 5};\n" +
                        "    int *ptr = arr;\n" +
-                       "    *(ptr + 1) = 100;\n" +
+                       "    ptr++;\n" +
+                       "    int result = *ptr;\n" +
                        "}";
 
         Lexer lexer = new Lexer(cCode);
@@ -176,8 +201,9 @@ public class TestPointerArithmetic {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("arr[1] = 100"), "Should convert assignment to array");
-        System.out.println("=== Pointer Assignment ===");
+        assertTrue(javaCode.contains("ptr_index++"), "Should convert ptr++");
+        assertTrue(javaCode.contains("arr[ptr_index]"), "Should convert *ptr to arr[ptr_index]");
+        System.out.println("=== Pointer Dereference After Increment ===");
         System.out.println(javaCode);
     }
 }

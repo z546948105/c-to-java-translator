@@ -24,6 +24,7 @@ public class AstTransformer implements AstVisitor<AstNode> {
     private String className = "TranslatedCode";
     private Set<String> stringVariables = new HashSet<>();
     private java.util.Map<String, String> pointerMappings = new java.util.HashMap<>();
+    private java.util.Map<String, String> pointerIndexVariables = new java.util.HashMap<>();
 
     public AstTransformer() {
     }
@@ -125,12 +126,16 @@ public class AstTransformer implements AstVisitor<AstNode> {
                 String ptrName = node.getName().getName();
                 String targetName = ((Identifier) javaInitializer).getName();
                 pointerMappings.put(ptrName, targetName);
-                return new Comment("// " + ptrName + " -> " + targetName + " (pointer mapping)");
+                String indexVarName = ptrName + "_index";
+                pointerIndexVariables.put(ptrName, indexVarName);
+                return new VariableDeclaration(new Type("int"), new Identifier(indexVarName), new Literal("0", Literal.LiteralType.INTEGER));
             } else if (javaInitializer instanceof ArrayAccess) {
                 String ptrName = node.getName().getName();
                 String arrName = ((Identifier) ((ArrayAccess) javaInitializer).getArray()).getName();
                 pointerMappings.put(ptrName, arrName);
-                return new Comment("// " + ptrName + " -> " + arrName + " (pointer mapping)");
+                String indexVarName = ptrName + "_index";
+                pointerIndexVariables.put(ptrName, indexVarName);
+                return new VariableDeclaration(new Type("int"), new Identifier(indexVarName), new Literal("0", Literal.LiteralType.INTEGER));
             }
         }
         
@@ -339,16 +344,18 @@ public class AstTransformer implements AstVisitor<AstNode> {
 
     @Override
     public AstNode visitUnaryExpression(UnaryExpression node) {
-        AstNode javaOperand = node.getOperand().accept(this);
-        
         if (node.getOperator().equals("*")) {
-            if (javaOperand instanceof Identifier) {
-                String ptrName = ((Identifier) javaOperand).getName();
+            if (node.getOperand() instanceof Identifier) {
+                String ptrName = ((Identifier) node.getOperand()).getName();
                 if (pointerMappings.containsKey(ptrName)) {
+                    if (pointerIndexVariables.containsKey(ptrName)) {
+                        return new ArrayAccess(new Identifier(pointerMappings.get(ptrName)), 
+                                              new Identifier(pointerIndexVariables.get(ptrName)));
+                    }
                     return new Identifier(pointerMappings.get(ptrName));
                 }
-            } else if (javaOperand instanceof BinaryExpression) {
-                BinaryExpression binExpr = (BinaryExpression) javaOperand;
+            } else if (node.getOperand() instanceof BinaryExpression) {
+                BinaryExpression binExpr = (BinaryExpression) node.getOperand();
                 if (binExpr.getOperator().equals("+") || binExpr.getOperator().equals("-")) {
                     AstNode left = binExpr.getLeft();
                     AstNode right = binExpr.getRight();
@@ -359,11 +366,12 @@ public class AstTransformer implements AstVisitor<AstNode> {
                     
                     if (left instanceof Identifier) {
                         arrName = ((Identifier) left).getName();
-                        indexExpr = right;
+                        indexExpr = right.accept(this);
                     } else if (right instanceof Identifier) {
                         arrName = ((Identifier) right).getName();
-                        indexExpr = left;
+                        indexExpr = left.accept(this);
                     } else {
+                        AstNode javaOperand = node.getOperand().accept(this);
                         return new UnaryExpression(node.getOperator(), javaOperand, node.isPostfix());
                     }
                     
@@ -377,9 +385,43 @@ public class AstTransformer implements AstVisitor<AstNode> {
                     
                     return new ArrayAccess(new Identifier(arrName), indexExpr);
                 }
+            } else if (node.getOperand() instanceof UnaryExpression) {
+                UnaryExpression innerExpr = (UnaryExpression) node.getOperand();
+                if (innerExpr.getOperator().equals("++") || innerExpr.getOperator().equals("--")) {
+                    if (innerExpr.getOperand() instanceof Identifier) {
+                        String ptrName = ((Identifier) innerExpr.getOperand()).getName();
+                        if (pointerMappings.containsKey(ptrName) && pointerIndexVariables.containsKey(ptrName)) {
+                            String arrName = pointerMappings.get(ptrName);
+                            String indexVarName = pointerIndexVariables.get(ptrName);
+                            
+                            if (innerExpr.isPostfix()) {
+                                return new ArrayAccess(new Identifier(arrName), 
+                                                      new UnaryExpression(innerExpr.getOperator(), 
+                                                                          new Identifier(indexVarName), 
+                                                                          true));
+                            } else {
+                                return new ArrayAccess(new Identifier(arrName), 
+                                                      new UnaryExpression(innerExpr.getOperator(), 
+                                                                          new Identifier(indexVarName), 
+                                                                          false));
+                            }
+                        }
+                    }
+                }
+            }
+        } else if ((node.getOperator().equals("++") || node.getOperator().equals("--"))) {
+            if (node.getOperand() instanceof Identifier) {
+                String ptrName = ((Identifier) node.getOperand()).getName();
+                if (pointerMappings.containsKey(ptrName) && pointerIndexVariables.containsKey(ptrName)) {
+                    String indexVarName = pointerIndexVariables.get(ptrName);
+                    return new UnaryExpression(node.getOperator(), 
+                                               new Identifier(indexVarName), 
+                                               node.isPostfix());
+                }
             }
         }
         
+        AstNode javaOperand = node.getOperand().accept(this);
         return new UnaryExpression(node.getOperator(), javaOperand, node.isPostfix());
     }
 
