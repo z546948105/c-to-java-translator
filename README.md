@@ -384,17 +384,27 @@ The visitor pattern allows easy extension:
 
 | 缺陷 | 描述 | 影响 |
 |------|------|------|
-| 指针算术 | 不支持 `ptr++`, `ptr + i`, `ptr[i]` 等指针算术操作 | 复杂数组遍历和内存操作无法转换 |
+| 指针算术 | 部分支持：`*(ptr + i)`、`*(ptr - i)`、`ptr[i]` 已支持，`ptr++`、`++ptr` 尚未支持 | 部分数组遍历代码无法转换 |
 | 指针数组 | 不支持 `int* arr[10]` 等指针数组 | 数组指针转换失败 |
 | 函数指针 | 部分支持，但转换语义不完整 | 回调函数和函数表无法正确转换 |
+
+**已支持的指针算术**：
+```c
+// 已支持转换的代码
+int arr[5] = {1, 2, 3, 4, 5};
+int *ptr = arr;
+int result1 = *(ptr + 2);   // → arr[2]
+int result2 = *(ptr - 1);   // → arr[-1]
+int result3 = ptr[2];       // → arr[2]
+*(ptr + i) = 100;           // → arr[i] = 100
+```
 
 **典型失败案例**：
 ```c
 // 无法正确转换的代码
-int arr[5] = {1, 2, 3, 4, 5};
 int *ptr = arr;
-for (int i = 0; i < 5; i++) {
-    printf("%d\n", *(ptr + i));  // 指针算术不支持
+while (*ptr != 0) {
+    printf("%d\n", *ptr++);  // ptr++ 不支持
 }
 ```
 
@@ -444,12 +454,19 @@ int area = PI * r * r;      // PI 被忽略
 | 改进项 | 实现方法 | 优先级 | 状态 |
 |--------|----------|--------|------|
 | 多级指针转换 | 使用 Java 数组模拟多级指针，如 `int**` → `int[][]` | 中 | ✅ 已实现 |
-| 指针算术支持 | 在 AstTransformer 中添加指针偏移量跟踪，将 `*(ptr + i)` 转换为 `arr[i]` | 高 | ⏳ 待实现 |
+| 指针算术支持 | 在 AstTransformer 中添加指针偏移量跟踪，将 `*(ptr + i)`、`*(ptr - i)`、`ptr[i]` 转换为 `arr[i]` | 高 | ✅ 已实现 |
+| 指针自增/自减 | 支持 `ptr++`、`++ptr`、`ptr--`、`--ptr` 的转换 | 高 | ⏳ 待实现 |
 | 指针数组支持 | 添加 PointerArrayType AST 节点，转换为 `Object[]` | 中 | ⏳ 待实现 |
 | 函数指针转换 | 将函数指针映射为 Java 函数式接口（如 `Function`, `BiFunction`） | 低 | ⏳ 待实现 |
 
+**已实现的指针转换**：
+- `*(ptr + i)` → `arr[i]` （加法偏移）
+- `*(ptr - i)` → `arr[-i]` （减法偏移）
+- `ptr[i]` → `arr[i]` （数组索引方式）
+- `*(ptr + i) = value` → `arr[i] = value` （指针赋值）
+
 **代码修改建议**：
-- 在 [AstTransformer.java](src/main/java/com/translator/transform/AstTransformer.java) 中添加 `PointerArithmeticTransformer` 类
+- 在 [AstTransformer.java](src/main/java/com/translator/transform/AstTransformer.java) 的 `visitUnaryExpression` 中添加 `ptr++`、`++ptr` 的处理
 
 #### 2. 宏处理改进
 
@@ -559,9 +576,10 @@ int area = PI * r * r;      // PI 被忽略
 6. ✅ 代码注释完善
 
 **Phase 2 - 核心能力增强（进行中）**
-1. ⏳ 实现指针算术支持
-2. ⏳ 添加宏展开器
-3. ⏳ 扩展标准库函数映射
+1. ✅ 实现指针算术支持（`*(ptr + i)`、`*(ptr - i)`、`ptr[i]`）
+2. ⏳ 指针自增/自减支持（`ptr++`、`++ptr`）
+3. ⏳ 添加宏展开器
+4. ⏳ 扩展标准库函数映射
 
 **Phase 3 - 质量与性能（待启动）**
 1. ⏳ 完善错误处理机制
