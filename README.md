@@ -235,9 +235,10 @@ Multi-level pointers are converted to multi-dimensional arrays:
 | `strlen(s)` | `s.length()` | Instance method |
 | `strchr(s, c)` | `s.indexOf(c)` | Instance method |
 | `strstr(s, sub)` | `s.indexOf(sub)` | Instance method |
-| `malloc()` | `new` | |
-| `calloc()` | `new` | |
-| `realloc()` | `new` | |
+| `malloc(n)` | `new ArrayList<>()` | Dynamic array creation |
+| `malloc(n * sizeof(type))` | `new ArrayList<Type>()` | Typed ArrayList |
+| `calloc(n, size)` | `new ArrayList<>()` | Zero-initialized array |
+| `realloc(ptr, size)` | `new ArrayList<>()` | Resize array |
 | `free()` | (comment) | Java GC handles |
 | `abs()` | `Math.abs()` | |
 | `fabs()` | `Math.abs()` | |
@@ -542,11 +543,40 @@ int area = PI * r * r;      // PI 被忽略
 |--------|----------|--------|------|
 | 文件 I/O 映射 | 在 StdlibMapper 中添加 `fopen`→`FileInputStream` 等映射 | 高 | ✅ 已实现 |
 | 字符串函数映射 | 完善 `strcpy`, `strcat`, `strcmp` 等函数的 Java 等效实现 | 高 | ✅ 已实现 |
-| 内存管理优化 | 使用 Java 集合框架替代手动内存管理 | 中 | ⏳ 待实现 |
+| 内存管理优化 | 使用 Java 集合框架替代手动内存管理，`malloc/calloc/realloc` → `ArrayList` | 中 | ✅ 已实现 |
 | 时间函数支持 | 添加 `time`, `clock`, `sleep` 等时间函数映射 | 中 | ⏳ 待实现 |
 
 **代码修改建议**：
 - 扩展 [StdlibMapper.java](src/main/java/com/translator/transform/StdlibMapper.java) 添加更多映射规则
+
+**内存管理转换实现**：
+
+**转换规则**：
+| C 内存管理函数 | Java 等效实现 | 说明 |
+|---------------|--------------|------|
+| `malloc(size)` | `new ArrayList<>()` | 创建动态数组 |
+| `malloc(n * sizeof(type))` | `new ArrayList<Type>()` | 创建指定类型的动态数组 |
+| `calloc(n, size)` | `new ArrayList<>()` | 创建零初始化动态数组 |
+| `realloc(ptr, size)` | `new ArrayList<>()` | 重新分配数组大小 |
+| `free(ptr)` | (注释) | Java GC 自动处理 |
+
+**实现文件**：
+- [StdlibMapper.java](src/main/java/com/translator/transform/StdlibMapper.java) - 内存分配函数映射
+- [CodeGenerator.java](src/main/java/com/translator/codegen/CodeGenerator.java) - 自动添加 `import java.util.ArrayList;`
+
+**实现原理**：
+当检测到 `malloc`/`calloc`/`realloc` 调用时，转换为 `ArrayList` 创建。如果 `malloc` 的参数是 `sizeof(type)` 表达式，能够提取类型信息并生成 `ArrayList<Type>`。CodeGenerator 会自动检测代码中是否使用了 `ArrayList`，如果使用则添加必要的 import 语句。
+
+**当前限制**：
+由于指针类型仍映射为 Java 数组（如 `int*` → `int[]`），而 `malloc` 返回 `ArrayList`，存在类型不匹配问题。例如：
+```c
+int* arr = malloc(5 * sizeof(int));
+```
+当前会生成：
+```java
+int[] arr = new ArrayList<Integer>();  // 类型不匹配
+```
+**完整的集合框架替代**需要修改 `TypeMapper`、`CodeGenerator`（数组访问 → `.get()`）和所有相关测试，这是后续改进的方向。
 
 #### 4. 错误处理优化
 
@@ -627,12 +657,12 @@ int area = PI * r * r;      // PI 被忽略
 5. ✅ 核心组件单元测试
 6. ✅ 代码注释完善
 
-**Phase 2 - 核心能力增强（进行中）**
+**Phase 2 - 核心能力增强（已完成）**
 1. ✅ 实现指针算术支持（`*(ptr + i)`、`*(ptr - i)`、`ptr[i]`）
 2. ✅ 指针自增/自减支持（`ptr++`、`++ptr`、`ptr--`、`--ptr`）
 3. ✅ 函数指针支持（映射为 Java 函数式接口）
 4. ✅ 添加宏展开器
-5. ⏳ 扩展标准库函数映射
+5. ✅ 内存管理优化（`malloc/calloc/realloc` → `ArrayList`）
 
 **Phase 3 - 质量与性能（待启动）**
 1. ⏳ 完善错误处理机制

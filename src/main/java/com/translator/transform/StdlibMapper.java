@@ -70,11 +70,18 @@ public class StdlibMapper {
                             if (typeName.startsWith("struct ")) {
                                 typeName = typeName.substring("struct ".length());
                             }
-                            return new FunctionCall(new Identifier("new " + typeName), new ArrayList<>());
+                            String wrapperType = toWrapperType(typeName);
+                            return new FunctionCall(new Identifier("new ArrayList<" + wrapperType + ">"), new ArrayList<>());
                         }
                     }
                 }
-                return new FunctionCall(new Identifier("new"), newArgs);
+                return new FunctionCall(new Identifier("new ArrayList<>"), new ArrayList<>());
+
+            case "calloc":
+                return new FunctionCall(new Identifier("new ArrayList<>"), new ArrayList<>());
+
+            case "realloc":
+                return new FunctionCall(new Identifier("new ArrayList<>"), new ArrayList<>());
 
             case "free":
                 return new FunctionCall(new Identifier("/* free removed */"), new ArrayList<>());
@@ -288,6 +295,21 @@ public class StdlibMapper {
         }
     }
 
+    private static String toWrapperType(String typeName) {
+        switch (typeName) {
+            case "int": return "Integer";
+            case "long": return "Long";
+            case "short": return "Short";
+            case "char": return "Character";
+            case "float": return "Float";
+            case "double": return "Double";
+            case "boolean": return "Boolean";
+            case "byte": return "Byte";
+            case "void": return "Object";
+            default: return typeName;
+        }
+    }
+
     private static String mapFopenMode(String mode) {
         if (mode.contains("w")) {
             if (mode.contains("b")) {
@@ -313,10 +335,10 @@ public class StdlibMapper {
     static {
         stdlibMap.put("printf", "System.out.printf");
         stdlibMap.put("scanf", "ScannerInput.scan");
-        stdlibMap.put("malloc", "new");
+        stdlibMap.put("malloc", "new ArrayList<>");
         stdlibMap.put("free", "/* free */");
-        stdlibMap.put("calloc", "new");
-        stdlibMap.put("realloc", "new");
+        stdlibMap.put("calloc", "new ArrayList<>");
+        stdlibMap.put("realloc", "new ArrayList<>");
         stdlibMap.put("strlen", "String.length");
         stdlibMap.put("strcpy", "String.copyValueOf");
         stdlibMap.put("strncpy", "String.copyValueOf");

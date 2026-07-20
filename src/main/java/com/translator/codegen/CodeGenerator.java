@@ -20,14 +20,24 @@ import java.util.List;
 public class CodeGenerator implements AstVisitor<String> {
     private static final String INDENT = "    ";
     private int indentLevel = 0;
+    private boolean needsArrayListImport = false;
 
     @Override
     public String visitProgram(Program node) {
         StringBuilder sb = new StringBuilder();
+        needsArrayListImport = false;
+        
         for (AstNode decl : node.getDeclarations()) {
             sb.append(decl.accept(this)).append("\n\n");
         }
-        return sb.toString().trim();
+        
+        String result = sb.toString().trim();
+        
+        if (needsArrayListImport && !result.contains("import java.util.ArrayList")) {
+            result = "import java.util.ArrayList;\n" + result;
+        }
+        
+        return result;
     }
 
     @Override
@@ -326,6 +336,10 @@ public class CodeGenerator implements AstVisitor<String> {
     public String visitFunctionCall(FunctionCall node) {
         StringBuilder sb = new StringBuilder();
         String name = node.getName().accept(this);
+        
+        if (name.contains("ArrayList")) {
+            needsArrayListImport = true;
+        }
         
         if (name.equals("sizeof")) {
             String arg = node.getArguments().get(0).accept(this);
