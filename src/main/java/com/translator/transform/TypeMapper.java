@@ -51,26 +51,22 @@ public class TypeMapper {
         String baseType = mapPrimitiveType(type.getName());
         
         if (type.isArray()) {
-            String elementType = baseType;
             if (type.isPointer()) {
-                if (baseType.equals("void")) {
-                    elementType = "Object";
-                } else if (baseType.equals("char")) {
-                    elementType = "String";
-                } else if (type.getPointerLevel() == 1) {
-                    elementType = baseType + "[]";
+                if (type.getArraySize() != null) {
+                    return "Object[" + type.getArraySize() + "]";
                 } else {
-                    elementType = "Object";
-                }
-            } else {
-                if (baseType.equals("char")) {
-                    return "String";
+                    return "Object[]";
                 }
             }
+            
+            if (baseType.equals("char")) {
+                return "String";
+            }
+            
             if (type.getArraySize() != null) {
-                return elementType + "[" + type.getArraySize() + "]";
+                return baseType + "[" + type.getArraySize() + "]";
             } else {
-                return elementType + "[]";
+                return baseType + "[]";
             }
         }
         

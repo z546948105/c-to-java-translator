@@ -385,7 +385,7 @@ The visitor pattern allows easy extension:
 | 缺陷 | 描述 | 影响 |
 |------|------|------|
 | 指针算术 | 已支持：`*(ptr + i)`、`*(ptr - i)`、`ptr[i]`、`ptr++`、`++ptr`、`ptr--`、`--ptr` | 大部分数组遍历代码可转换 |
-| 指针数组 | 不支持 `int* arr[10]` 等指针数组 | 数组指针转换失败 |
+| 指针数组 | 已支持：`int* arr[10]` → `Object[10]` | 指针数组转换成功 |
 | 函数指针 | 部分支持，但转换语义不完整 | 回调函数和函数表无法正确转换 |
 
 **已支持的指针算术**：
@@ -455,7 +455,7 @@ int area = PI * r * r;      // PI 被忽略
 | 多级指针转换 | 使用 Java 数组模拟多级指针，如 `int**` → `int[][]` | 中 | ✅ 已实现 |
 | 指针算术支持 | 在 AstTransformer 中添加指针偏移量跟踪，将 `*(ptr + i)`、`*(ptr - i)`、`ptr[i]` 转换为 `arr[i]` | 高 | ✅ 已实现 |
 | 指针自增/自减 | 支持 `ptr++`、`++ptr`、`ptr--`、`--ptr` 的转换，使用索引变量模拟指针移动 | 高 | ✅ 已实现 |
-| 指针数组支持 | 添加 PointerArrayType AST 节点，转换为 `Object[]` | 中 | ⏳ 待实现 |
+| 指针数组支持 | 通过 TypeMapper 处理 `isPointer() && isArray()` 组合，转换为 `Object[]` | 中 | ✅ 已实现 |
 | 函数指针转换 | 将函数指针映射为 Java 函数式接口（如 `Function`, `BiFunction`） | 低 | ⏳ 待实现 |
 
 **已实现的指针转换**：
