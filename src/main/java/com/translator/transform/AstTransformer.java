@@ -568,20 +568,15 @@ public class AstTransformer implements AstVisitor<AstNode> {
     @Override
     public AstNode visitFunctionPointerType(FunctionPointerType node) {
         Type javaReturnType = (Type) node.getReturnType().accept(this);
-        String returnTypeName = javaReturnType.getName();
         
-        int paramCount = node.getParameterCount();
-        
-        if (paramCount == 1 && node.getParameterTypes().get(0).getName().equals("void")) {
-            paramCount = 0;
+        List<Type> javaParamTypes = new ArrayList<>();
+        if (node.getParameterTypes() != null) {
+            for (Type paramType : node.getParameterTypes()) {
+                javaParamTypes.add((Type) paramType.accept(this));
+            }
         }
         
-        String functionalInterfaceName = getFunctionalInterfaceName(returnTypeName, paramCount);
-        
-        if (node.isArray()) {
-            return new Type(functionalInterfaceName, 0, true, node.getArraySize());
-        }
-        return new Type(functionalInterfaceName);
+        return new FunctionPointerType(javaReturnType, javaParamTypes, node.isArray(), node.getArraySize());
     }
     
     private String getFunctionalInterfaceName(String returnType, int paramCount) {

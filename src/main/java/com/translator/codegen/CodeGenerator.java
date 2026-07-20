@@ -2,6 +2,7 @@ package com.translator.codegen;
 
 import com.translator.ast.*;
 import com.translator.transform.TypeMapper;
+import java.util.List;
 
 /**
  * 代码生成器（CodeGenerator）
@@ -500,26 +501,67 @@ public class CodeGenerator implements AstVisitor<String> {
     public String visitFunctionPointerType(FunctionPointerType node) {
         StringBuilder sb = new StringBuilder();
         sb.append("java.util.function.");
-        String returnTypeName = node.getReturnType().accept(this);
+        String returnTypeName = TypeMapper.mapType(node.getReturnType());
         int paramCount = node.getParameterCount();
+        List<Type> paramTypes = node.getParameterTypes();
         
-        if (paramCount == 1 && node.getParameterTypes().get(0).getName().equals("void")) {
+        if (paramCount == 1 && paramTypes != null && !paramTypes.isEmpty() && paramTypes.get(0).getName().equals("void")) {
             paramCount = 0;
         }
         
         if (returnTypeName.equals("void")) {
             switch (paramCount) {
                 case 0: sb.append("Runnable"); break;
-                case 1: sb.append("Consumer"); break;
-                case 2: sb.append("BiConsumer"); break;
+                case 1: {
+                    sb.append("Consumer<");
+                    sb.append(toWrapperType(TypeMapper.mapType(paramTypes.get(0))));
+                    sb.append(">");
+                    break;
+                }
+                case 2: {
+                    sb.append("BiConsumer<");
+                    sb.append(toWrapperType(TypeMapper.mapType(paramTypes.get(0))));
+                    sb.append(", ");
+                    sb.append(toWrapperType(TypeMapper.mapType(paramTypes.get(1))));
+                    sb.append(">");
+                    break;
+                }
                 default: sb.append("Runnable"); break;
             }
         } else {
             switch (paramCount) {
-                case 0: sb.append("Supplier"); break;
-                case 1: sb.append("Function"); break;
-                case 2: sb.append("BiFunction"); break;
-                default: sb.append("Function"); break;
+                case 0: {
+                    sb.append("Supplier<");
+                    sb.append(toWrapperType(returnTypeName));
+                    sb.append(">");
+                    break;
+                }
+                case 1: {
+                    sb.append("Function<");
+                    sb.append(toWrapperType(TypeMapper.mapType(paramTypes.get(0))));
+                    sb.append(", ");
+                    sb.append(toWrapperType(returnTypeName));
+                    sb.append(">");
+                    break;
+                }
+                case 2: {
+                    sb.append("BiFunction<");
+                    sb.append(toWrapperType(TypeMapper.mapType(paramTypes.get(0))));
+                    sb.append(", ");
+                    sb.append(toWrapperType(TypeMapper.mapType(paramTypes.get(1))));
+                    sb.append(", ");
+                    sb.append(toWrapperType(returnTypeName));
+                    sb.append(">");
+                    break;
+                }
+                default: {
+                    sb.append("Function<");
+                    sb.append(toWrapperType(TypeMapper.mapType(paramTypes.get(0))));
+                    sb.append(", ");
+                    sb.append(toWrapperType(returnTypeName));
+                    sb.append(">");
+                    break;
+                }
             }
         }
         
@@ -528,5 +570,19 @@ public class CodeGenerator implements AstVisitor<String> {
         }
         
         return sb.toString();
+    }
+    
+    private String toWrapperType(String typeName) {
+        switch (typeName) {
+            case "int": return "Integer";
+            case "long": return "Long";
+            case "short": return "Short";
+            case "char": return "Character";
+            case "float": return "Float";
+            case "double": return "Double";
+            case "boolean": return "Boolean";
+            case "byte": return "Byte";
+            default: return typeName;
+        }
     }
 }

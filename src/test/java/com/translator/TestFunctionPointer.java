@@ -30,8 +30,8 @@ public class TestFunctionPointer {
         assertNotNull(javaCode);
         System.out.println("=== Function Pointer Declaration ===");
         System.out.println(javaCode);
-        assertTrue(javaCode.contains("java.util.function.Function func"), 
-                   "Should convert int (*func)(int) to Function");
+        assertTrue(javaCode.contains("java.util.function.Function<Integer, Integer> func"), 
+                   "Should convert int (*func)(int) to Function<Integer, Integer>");
         System.out.println("=== Generated code contains Function: " + javaCode.contains("java.util.function.Function"));
     }
 
@@ -52,8 +52,8 @@ public class TestFunctionPointer {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("java.util.function.BiFunction func"), 
-                   "Should convert int (*func)(int, int) to BiFunction");
+        assertTrue(javaCode.contains("java.util.function.BiFunction<Integer, Integer, Integer> func"), 
+                   "Should convert int (*func)(int, int) to BiFunction<Integer, Integer, Integer>");
         System.out.println("=== Function Pointer With Two Params ===");
         System.out.println(javaCode);
     }
@@ -75,8 +75,8 @@ public class TestFunctionPointer {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("java.util.function.Consumer callback"), 
-                   "Should convert void (*callback)(int) to Consumer");
+        assertTrue(javaCode.contains("java.util.function.Consumer<Integer> callback"), 
+                   "Should convert void (*callback)(int) to Consumer<Integer>");
         System.out.println("=== Function Pointer With Void Return ===");
         System.out.println(javaCode);
     }
@@ -98,10 +98,10 @@ public class TestFunctionPointer {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("java.util.function.Supplier getter"), 
-                   "Should convert int (*getter)(void) to Supplier");
         System.out.println("=== Function Pointer With No Params ===");
         System.out.println(javaCode);
+        assertTrue(javaCode.contains("java.util.function.Supplier<Integer> getter"), 
+                   "Should convert int (*getter)(void) to Supplier<Integer>");
     }
 
     @Test
@@ -145,8 +145,8 @@ public class TestFunctionPointer {
         String javaCode = generator.visitProgram(javaProgram);
 
         assertNotNull(javaCode);
-        assertTrue(javaCode.contains("java.util.function.Function func"), 
-                   "Should convert int (*func)(int) to Function");
+        assertTrue(javaCode.contains("java.util.function.Function<Integer, Integer> func"), 
+                   "Should convert int (*func)(int) to Function<Integer, Integer>");
         System.out.println("=== Function Pointer Assignment ===");
         System.out.println(javaCode);
     }
@@ -170,7 +170,7 @@ public class TestFunctionPointer {
         assertNotNull(javaCode);
         System.out.println("=== Function Pointer Array ===");
         System.out.println(javaCode);
-        assertTrue(javaCode.contains("java.util.function.Function[] funcs"), 
-                   "Should convert int (*funcs[5])(int) to Function[]");
+        assertTrue(javaCode.contains("java.util.function.Function<Integer, Integer>[] funcs"), 
+                   "Should convert int (*funcs[5])(int) to Function<Integer, Integer>[]");
     }
 }

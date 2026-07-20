@@ -321,6 +321,7 @@ Open http://localhost:9988 in your browser.
 - Qualifiers: `const`, `unsigned`, `static`
 - Size types: `size_t`
 - Arrays and pointers (including multi-level pointers)
+- Function pointers (mapped to Java functional interfaces)
 - Structs and unions
 - Enums
 
@@ -385,8 +386,8 @@ The visitor pattern allows easy extension:
 | 缺陷 | 描述 | 影响 |
 |------|------|------|
 | 指针算术 | 已支持：`*(ptr + i)`、`*(ptr - i)`、`ptr[i]`、`ptr++`、`++ptr`、`ptr--`、`--ptr` | 大部分数组遍历代码可转换 |
-| 指针数组 | 已支持：`int* arr[10]` → `Object[10]` | 指针数组转换成功 |
-| 函数指针 | 部分支持，但转换语义不完整 | 回调函数和函数表无法正确转换 |
+| 指针数组 | 已支持：`int* arr[10]` → `Object[]` | 指针数组转换成功 |
+| 函数指针 | 已支持：映射为 Java 函数式接口 | 回调函数和函数表可正确转换 |
 
 **已支持的指针算术**：
 ```c
@@ -401,10 +402,14 @@ int result5 = *++ptr;       // → arr[++ptr_index]
 *(ptr + i) = 100;           // → arr[i] = 100
 ```
 
-**典型失败案例**：
+**函数指针转换**：
 ```c
-// 无法正确转换的代码
-int* arr[10];               // 指针数组不支持
+// 已支持转换的代码
+int (*func)(int);           // → java.util.function.Function func
+void (*callback)(int);      // → java.util.function.Consumer callback
+int (*getter)(void);        // → java.util.function.Supplier getter
+void (*run)(void);          // → java.util.function.Runnable run
+int (*funcs[5])(int);       // → java.util.function.Function[] funcs
 ```
 
 #### 2. 宏处理能力有限
@@ -456,7 +461,7 @@ int area = PI * r * r;      // PI 被忽略
 | 指针算术支持 | 在 AstTransformer 中添加指针偏移量跟踪，将 `*(ptr + i)`、`*(ptr - i)`、`ptr[i]` 转换为 `arr[i]` | 高 | ✅ 已实现 |
 | 指针自增/自减 | 支持 `ptr++`、`++ptr`、`ptr--`、`--ptr` 的转换，使用索引变量模拟指针移动 | 高 | ✅ 已实现 |
 | 指针数组支持 | 通过 TypeMapper 处理 `isPointer() && isArray()` 组合，转换为 `Object[]` | 中 | ✅ 已实现 |
-| 函数指针转换 | 将函数指针映射为 Java 函数式接口（如 `Function`, `BiFunction`） | 低 | ⏳ 待实现 |
+| 函数指针转换 | 将函数指针映射为 Java 函数式接口（如 `Function`, `BiFunction`, `Consumer`, `Supplier`, `Runnable`） | 低 | ✅ 已实现 |
 
 **已实现的指针转换**：
 - `*(ptr + i)` → `arr[i]` （加法偏移）
@@ -468,6 +473,25 @@ int area = PI * r * r;      // PI 被忽略
 - `*ptr--` → `arr[ptr_index--]` （后缀自减）
 - `*--ptr` → `arr[--ptr_index]` （前缀自减）
 - `ptr++` / `--ptr` → `ptr_index++` / `--ptr_index` （单独语句）
+
+**函数指针映射规则**：
+
+| C 函数指针类型 | Java 函数式接口 | 说明 |
+|---------------|----------------|------|
+| `int (*)(void)` | `java.util.function.Supplier<Integer>` | 无参数，返回值 |
+| `int (*)(int)` | `java.util.function.Function<Integer, Integer>` | 单参数，返回值 |
+| `int (*)(int, int)` | `java.util.function.BiFunction<Integer, Integer, Integer>` | 双参数，返回值 |
+| `void (*)(void)` | `java.util.function.Runnable` | 无参数，无返回值 |
+| `void (*)(int)` | `java.util.function.Consumer<Integer>` | 单参数，无返回值 |
+| `void (*)(int, int)` | `java.util.function.BiConsumer<Integer, Integer>` | 双参数，无返回值 |
+| `int (*funcs[5])(int)` | `java.util.function.Function<Integer, Integer>[]` | 函数指针数组 |
+
+**泛型参数处理**：生成的函数式接口使用 Java 包装类型（如 `Integer`、`Long`）作为泛型参数，符合 Java 泛型规范。
+
+**实现文件**：
+- [FunctionPointerType.java](src/main/java/com/translator/ast/FunctionPointerType.java) - 函数指针类型 AST 节点
+- [AstTransformer.java](src/main/java/com/translator/transform/AstTransformer.java) - AST 转换逻辑
+- [CodeGenerator.java](src/main/java/com/translator/codegen/CodeGenerator.java) - 代码生成（含泛型参数和包装类型转换）
 
 **实现原理**：
 当指针指向数组时，创建对应的索引变量（如 `ptr_index`），通过维护索引变量来模拟指针的移动。`int *ptr = arr;` 转换为 `int ptr_index = 0;`，后续的指针操作通过索引变量实现。
@@ -582,8 +606,9 @@ int area = PI * r * r;      // PI 被忽略
 **Phase 2 - 核心能力增强（进行中）**
 1. ✅ 实现指针算术支持（`*(ptr + i)`、`*(ptr - i)`、`ptr[i]`）
 2. ✅ 指针自增/自减支持（`ptr++`、`++ptr`、`ptr--`、`--ptr`）
-3. ⏳ 添加宏展开器
-4. ⏳ 扩展标准库函数映射
+3. ✅ 函数指针支持（映射为 Java 函数式接口）
+4. ⏳ 添加宏展开器
+5. ⏳ 扩展标准库函数映射
 
 **Phase 3 - 质量与性能（待启动）**
 1. ⏳ 完善错误处理机制
@@ -592,9 +617,8 @@ int area = PI * r * r;      // PI 被忽略
 4. ⏳ 添加集成测试和回归测试
 
 **Phase 4 - 高级特性（待启动）**
-1. ⏳ 支持函数指针
-2. ⏳ 实现多文件编译支持
-3. ⏳ 添加条件编译支持
+1. ⏳ 实现多文件编译支持
+2. ⏳ 添加条件编译支持
 
 ## License
 
