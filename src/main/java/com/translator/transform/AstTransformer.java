@@ -126,6 +126,11 @@ public class AstTransformer implements AstVisitor<AstNode> {
                 String targetName = ((Identifier) javaInitializer).getName();
                 pointerMappings.put(ptrName, targetName);
                 return new Comment("// " + ptrName + " -> " + targetName + " (pointer mapping)");
+            } else if (javaInitializer instanceof ArrayAccess) {
+                String ptrName = node.getName().getName();
+                String arrName = ((Identifier) ((ArrayAccess) javaInitializer).getArray()).getName();
+                pointerMappings.put(ptrName, arrName);
+                return new Comment("// " + ptrName + " -> " + arrName + " (pointer mapping)");
             }
         }
         
@@ -344,24 +349,33 @@ public class AstTransformer implements AstVisitor<AstNode> {
                 }
             } else if (javaOperand instanceof BinaryExpression) {
                 BinaryExpression binExpr = (BinaryExpression) javaOperand;
-                if (binExpr.getOperator().equals("+")) {
+                if (binExpr.getOperator().equals("+") || binExpr.getOperator().equals("-")) {
                     AstNode left = binExpr.getLeft();
                     AstNode right = binExpr.getRight();
+                    String operator = binExpr.getOperator();
                     
                     String arrName;
+                    AstNode indexExpr;
+                    
                     if (left instanceof Identifier) {
                         arrName = ((Identifier) left).getName();
-                        if (pointerMappings.containsKey(arrName)) {
-                            arrName = pointerMappings.get(arrName);
-                        }
-                        return new ArrayAccess(new Identifier(arrName), right);
+                        indexExpr = right;
                     } else if (right instanceof Identifier) {
                         arrName = ((Identifier) right).getName();
-                        if (pointerMappings.containsKey(arrName)) {
-                            arrName = pointerMappings.get(arrName);
-                        }
-                        return new ArrayAccess(new Identifier(arrName), left);
+                        indexExpr = left;
+                    } else {
+                        return new UnaryExpression(node.getOperator(), javaOperand, node.isPostfix());
                     }
+                    
+                    if (pointerMappings.containsKey(arrName)) {
+                        arrName = pointerMappings.get(arrName);
+                    }
+                    
+                    if (operator.equals("-")) {
+                        indexExpr = new UnaryExpression("-", indexExpr, false);
+                    }
+                    
+                    return new ArrayAccess(new Identifier(arrName), indexExpr);
                 }
             }
         }
@@ -388,6 +402,14 @@ public class AstTransformer implements AstVisitor<AstNode> {
     public AstNode visitArrayAccess(ArrayAccess node) {
         AstNode javaArray = node.getArray().accept(this);
         AstNode javaIndex = node.getIndex().accept(this);
+        
+        if (javaArray instanceof Identifier) {
+            String arrayName = ((Identifier) javaArray).getName();
+            if (pointerMappings.containsKey(arrayName)) {
+                javaArray = new Identifier(pointerMappings.get(arrayName));
+            }
+        }
+        
         return new ArrayAccess(javaArray, javaIndex);
     }
 
