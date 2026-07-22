@@ -22,15 +22,38 @@ import java.util.Set;
  */
 public class AstTransformer implements AstVisitor<AstNode> {
     private String className = "TranslatedCode";
-    private Set<String> stringVariables = new HashSet<>();
-    private java.util.Map<String, String> pointerMappings = new java.util.HashMap<>();
-    private java.util.Map<String, String> pointerIndexVariables = new java.util.HashMap<>();
+    private ThreadLocal<Set<String>> stringVariables = ThreadLocal.withInitial(HashSet::new);
+    private ThreadLocal<java.util.Map<String, String>> pointerMappings = ThreadLocal.withInitial(java.util.HashMap::new);
+    private ThreadLocal<java.util.Map<String, String>> pointerIndexVariables = ThreadLocal.withInitial(java.util.HashMap::new);
+    private ThreadLocal<java.util.Map<String, String>> typeCache = ThreadLocal.withInitial(java.util.HashMap::new);
+    private ThreadLocal<java.util.Map<String, AstNode>> expressionCache = ThreadLocal.withInitial(java.util.HashMap::new);
 
     public AstTransformer() {
     }
 
     public AstTransformer(String className) {
         this.className = className;
+    }
+
+    public void clearCache() {
+        typeCache.get().clear();
+        expressionCache.get().clear();
+    }
+
+    public int getTypeCacheSize() {
+        return typeCache.get().size();
+    }
+
+    public int getExpressionCacheSize() {
+        return expressionCache.get().size();
+    }
+
+    public void removeThreadLocal() {
+        stringVariables.remove();
+        pointerMappings.remove();
+        pointerIndexVariables.remove();
+        typeCache.remove();
+        expressionCache.remove();
     }
 
     @Override
@@ -103,10 +126,18 @@ public class AstTransformer implements AstVisitor<AstNode> {
 
     @Override
     public AstNode visitType(Type node) {
+        String cacheKey = node.toString();
+        if (typeCache.get().containsKey(cacheKey)) {
+            return new Type(typeCache.get().get(cacheKey), node.getPointerLevel(), node.isArray(), node.getArraySize());
+        }
+
         if (node instanceof FunctionPointerType) {
-            return visitFunctionPointerType((FunctionPointerType) node);
+            AstNode result = visitFunctionPointerType((FunctionPointerType) node);
+            typeCache.get().put(cacheKey, result.toString());
+            return result;
         }
         String javaTypeName = TypeMapper.mapType(node);
+        typeCache.get().put(cacheKey, javaTypeName);
         return new Type(javaTypeName, node.getPointerLevel(), node.isArray(), node.getArraySize());
     }
 
@@ -122,28 +153,28 @@ public class AstTransformer implements AstVisitor<AstNode> {
                     javaInitializer = init.getOperand();
                     String ptrName = node.getName().getName();
                     String targetName = ((Identifier) init.getOperand()).getName();
-                    pointerMappings.put(ptrName, targetName);
+                    pointerMappings.get().put(ptrName, targetName);
                     return new Comment("// " + ptrName + " -> " + targetName + " (pointer mapping)");
                 }
             } else if (javaInitializer instanceof Identifier) {
                 String ptrName = node.getName().getName();
                 String targetName = ((Identifier) javaInitializer).getName();
-                pointerMappings.put(ptrName, targetName);
+                pointerMappings.get().put(ptrName, targetName);
                 String indexVarName = ptrName + "_index";
-                pointerIndexVariables.put(ptrName, indexVarName);
+                pointerIndexVariables.get().put(ptrName, indexVarName);
                 return new VariableDeclaration(new Type("int"), new Identifier(indexVarName), new Literal("0", Literal.LiteralType.INTEGER));
             } else if (javaInitializer instanceof ArrayAccess) {
                 String ptrName = node.getName().getName();
                 String arrName = ((Identifier) ((ArrayAccess) javaInitializer).getArray()).getName();
-                pointerMappings.put(ptrName, arrName);
+                pointerMappings.get().put(ptrName, arrName);
                 String indexVarName = ptrName + "_index";
-                pointerIndexVariables.put(ptrName, indexVarName);
+                pointerIndexVariables.get().put(ptrName, indexVarName);
                 return new VariableDeclaration(new Type("int"), new Identifier(indexVarName), new Literal("0", Literal.LiteralType.INTEGER));
             }
         }
         
         if (javaType.getName().equals("String")) {
-            stringVariables.add(node.getName().getName());
+            stringVariables.get().add(node.getName().getName());
         }
         return new VariableDeclaration(javaType, node.getName(), javaInitializer);
     }
@@ -319,20 +350,30 @@ public class AstTransformer implements AstVisitor<AstNode> {
 
     @Override
     public AstNode visitBinaryExpression(BinaryExpression node) {
+        String cacheKey = node.toString();
+        if (expressionCache.get().containsKey(cacheKey)) {
+            return expressionCache.get().get(cacheKey);
+        }
+
         AstNode javaLeft = node.getLeft().accept(this);
         AstNode javaRight = node.getRight().accept(this);
         String operator = node.getOperator();
         // 对于 == 和 != 运算符，若操作数为字符串，则使用特殊操作符以便 CodeGenerator 生成 equals 调用
         if (operator.equals("==") || operator.equals("!=")) {
             if (isStringOperand(javaLeft) || isStringOperand(javaRight)) {
+                BinaryExpression result;
                 if (operator.equals("==")) {
-                    return new BinaryExpression(javaLeft, "equals", javaRight);
+                    result = new BinaryExpression(javaLeft, "equals", javaRight);
                 } else {
-                    return new BinaryExpression(javaLeft, "notequals", javaRight);
+                    result = new BinaryExpression(javaLeft, "notequals", javaRight);
                 }
+                expressionCache.get().put(cacheKey, result);
+                return result;
             }
         }
-        return new BinaryExpression(javaLeft, operator, javaRight);
+        BinaryExpression result = new BinaryExpression(javaLeft, operator, javaRight);
+        expressionCache.get().put(cacheKey, result);
+        return result;
     }
 
     /**
@@ -343,7 +384,7 @@ public class AstTransformer implements AstVisitor<AstNode> {
             return ((Literal) node).getType() == Literal.LiteralType.STRING;
         }
         if (node instanceof Identifier) {
-            return stringVariables.contains(((Identifier) node).getName());
+            return stringVariables.get().contains(((Identifier) node).getName());
         }
         return false;
     }
@@ -353,12 +394,12 @@ public class AstTransformer implements AstVisitor<AstNode> {
         if (node.getOperator().equals("*")) {
             if (node.getOperand() instanceof Identifier) {
                 String ptrName = ((Identifier) node.getOperand()).getName();
-                if (pointerMappings.containsKey(ptrName)) {
-                    if (pointerIndexVariables.containsKey(ptrName)) {
-                        return new ArrayAccess(new Identifier(pointerMappings.get(ptrName)), 
-                                              new Identifier(pointerIndexVariables.get(ptrName)));
+                if (pointerMappings.get().containsKey(ptrName)) {
+                    if (pointerIndexVariables.get().containsKey(ptrName)) {
+                        return new ArrayAccess(new Identifier(pointerMappings.get().get(ptrName)), 
+                                              new Identifier(pointerIndexVariables.get().get(ptrName)));
                     }
-                    return new Identifier(pointerMappings.get(ptrName));
+                    return new Identifier(pointerMappings.get().get(ptrName));
                 }
             } else if (node.getOperand() instanceof BinaryExpression) {
                 BinaryExpression binExpr = (BinaryExpression) node.getOperand();
@@ -381,8 +422,8 @@ public class AstTransformer implements AstVisitor<AstNode> {
                         return new UnaryExpression(node.getOperator(), javaOperand, node.isPostfix());
                     }
                     
-                    if (pointerMappings.containsKey(arrName)) {
-                        arrName = pointerMappings.get(arrName);
+                    if (pointerMappings.get().containsKey(arrName)) {
+                        arrName = pointerMappings.get().get(arrName);
                     }
                     
                     if (operator.equals("-")) {
@@ -396,9 +437,9 @@ public class AstTransformer implements AstVisitor<AstNode> {
                 if (innerExpr.getOperator().equals("++") || innerExpr.getOperator().equals("--")) {
                     if (innerExpr.getOperand() instanceof Identifier) {
                         String ptrName = ((Identifier) innerExpr.getOperand()).getName();
-                        if (pointerMappings.containsKey(ptrName) && pointerIndexVariables.containsKey(ptrName)) {
-                            String arrName = pointerMappings.get(ptrName);
-                            String indexVarName = pointerIndexVariables.get(ptrName);
+                        if (pointerMappings.get().containsKey(ptrName) && pointerIndexVariables.get().containsKey(ptrName)) {
+                            String arrName = pointerMappings.get().get(ptrName);
+                            String indexVarName = pointerIndexVariables.get().get(ptrName);
                             
                             if (innerExpr.isPostfix()) {
                                 return new ArrayAccess(new Identifier(arrName), 
@@ -418,8 +459,8 @@ public class AstTransformer implements AstVisitor<AstNode> {
         } else if ((node.getOperator().equals("++") || node.getOperator().equals("--"))) {
             if (node.getOperand() instanceof Identifier) {
                 String ptrName = ((Identifier) node.getOperand()).getName();
-                if (pointerMappings.containsKey(ptrName) && pointerIndexVariables.containsKey(ptrName)) {
-                    String indexVarName = pointerIndexVariables.get(ptrName);
+                if (pointerMappings.get().containsKey(ptrName) && pointerIndexVariables.get().containsKey(ptrName)) {
+                    String indexVarName = pointerIndexVariables.get().get(ptrName);
                     return new UnaryExpression(node.getOperator(), 
                                                new Identifier(indexVarName), 
                                                node.isPostfix());
@@ -448,17 +489,24 @@ public class AstTransformer implements AstVisitor<AstNode> {
 
     @Override
     public AstNode visitArrayAccess(ArrayAccess node) {
+        String cacheKey = node.toString();
+        if (expressionCache.get().containsKey(cacheKey)) {
+            return expressionCache.get().get(cacheKey);
+        }
+
         AstNode javaArray = node.getArray().accept(this);
         AstNode javaIndex = node.getIndex().accept(this);
         
         if (javaArray instanceof Identifier) {
             String arrayName = ((Identifier) javaArray).getName();
-            if (pointerMappings.containsKey(arrayName)) {
-                javaArray = new Identifier(pointerMappings.get(arrayName));
+            if (pointerMappings.get().containsKey(arrayName)) {
+                javaArray = new Identifier(pointerMappings.get().get(arrayName));
             }
         }
         
-        return new ArrayAccess(javaArray, javaIndex);
+        ArrayAccess result = new ArrayAccess(javaArray, javaIndex);
+        expressionCache.get().put(cacheKey, result);
+        return result;
     }
 
     @Override
@@ -492,8 +540,8 @@ public class AstTransformer implements AstVisitor<AstNode> {
     private AstNode mapPointerReferences(AstNode node) {
         if (node instanceof Identifier) {
             String name = ((Identifier) node).getName();
-            if (pointerMappings.containsKey(name)) {
-                return new Identifier(pointerMappings.get(name));
+            if (pointerMappings.get().containsKey(name)) {
+                return new Identifier(pointerMappings.get().get(name));
             }
         }
         return node;

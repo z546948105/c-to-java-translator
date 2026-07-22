@@ -1,8 +1,8 @@
 package com.translator.token;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.StringReader;
+import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,14 +13,15 @@ import java.util.Map;
  * <p>
  * 支持的 token 类型：标识符、数字、字符串、关键字、运算符、分隔符等
  * <p>
- * 同时处理预处理指令（如 #define）
+ * 使用 BufferedReader 流式读取，避免一次性加载大文件
  */
 public class Lexer {
-    private final BufferedReader reader;
+    private BufferedReader reader;
     private int currentChar;
     private int line;
     private int column;
     private static final Map<String, TokenType> keywords = new HashMap<>();
+    private static final int BUFFER_SIZE = 8192;
 
     static {
         keywords.put("int", TokenType.INT);
@@ -59,6 +60,34 @@ public class Lexer {
         this.line = 1;
         this.column = 0;
         readNextChar();
+    }
+
+    public Lexer(File file) throws IOException {
+        this(file, StandardCharsets.UTF_8);
+    }
+
+    public Lexer(File file, Charset charset) throws IOException {
+        this.reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), charset), BUFFER_SIZE);
+        this.line = 1;
+        this.column = 0;
+        readNextChar();
+    }
+
+    public Lexer(InputStream inputStream) throws IOException {
+        this(inputStream, StandardCharsets.UTF_8);
+    }
+
+    public Lexer(InputStream inputStream, Charset charset) throws IOException {
+        this.reader = new BufferedReader(new InputStreamReader(inputStream, charset), BUFFER_SIZE);
+        this.line = 1;
+        this.column = 0;
+        readNextChar();
+    }
+
+    public void close() throws IOException {
+        if (reader != null) {
+            reader.close();
+        }
     }
 
     public Token peekToken() {

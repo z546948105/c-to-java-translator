@@ -46,17 +46,21 @@ public class Translator {
         log.debug("Starting translation process");
         long startTime = System.currentTimeMillis();
         
-        Program cAst = parser.parse();
-        log.debug("Parsing completed, declarations count: {}", cAst.getDeclarations().size());
-        
-        Program javaAst = (Program) cAst.accept(transformer);
-        log.debug("Transformation completed");
-        
-        String result = codeGenerator.visitProgram(javaAst);
-        long endTime = System.currentTimeMillis();
-        
-        log.debug("Translation completed in {}ms, output length: {}", endTime - startTime, result.length());
-        return result;
+        try {
+            Program cAst = parser.parse();
+            log.debug("Parsing completed, declarations count: {}", cAst.getDeclarations().size());
+            
+            Program javaAst = (Program) cAst.accept(transformer);
+            log.debug("Transformation completed");
+            
+            String result = codeGenerator.visitProgram(javaAst);
+            long endTime = System.currentTimeMillis();
+            
+            log.debug("Translation completed in {}ms, output length: {}", endTime - startTime, result.length());
+            return result;
+        } finally {
+            transformer.removeThreadLocal();
+        }
     }
 
     public static String translateCode(String cCode) {
