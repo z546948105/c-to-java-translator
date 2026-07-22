@@ -85,9 +85,26 @@ C Source Code → Preprocessor → Preprocessed Code → Lexer → Token Stream 
 
 ### 2. Parser (语法分析器)
 
-**Location**: `src/main/java/com/translator/parser/Parser.java`
+**Location**: `src/main/java/com/translator/parser/`
 
 **Responsibility**: Parses token stream into an Abstract Syntax Tree (AST) using recursive descent parsing.
+
+**Modular Structure**: The parser has been refactored into multiple sub-modules for better maintainability:
+
+| Sub-module | File | Responsibility |
+|------------|------|----------------|
+| `Parser` | [Parser.java](src/main/java/com/translator/parser/Parser.java) | Entry point, orchestrates parsing |
+| `ParserBase` | [ParserBase.java](src/main/java/com/translator/parser/ParserBase.java) | Abstract base class with common utilities (eat, match, error handling) |
+| `TypeParser` | [TypeParser.java](src/main/java/com/translator/parser/TypeParser.java) | Type parsing (parseType, parseIdentifier, variable declarations) |
+| `DeclarationParser` | [DeclarationParser.java](src/main/java/com/translator/parser/DeclarationParser.java) | Declaration parsing (functions, structs, enums, typedefs) |
+| `StatementParser` | [StatementParser.java](src/main/java/com/translator/parser/StatementParser.java) | Statement parsing (if, while, for, switch, return) |
+| `ExpressionParser` | [ExpressionParser.java](src/main/java/com/translator/parser/ExpressionParser.java) | Expression parsing with operator precedence (assignments, binary/unary expressions) |
+
+**Design Principles**:
+- **Single Responsibility**: Each parser handles a specific grammar category
+- **Dependency Injection**: Dependencies injected via constructor to avoid circular dependencies
+- **Package-private**: Sub-parsers are package-private, only `Parser` exposes public API
+- **Shared State**: All sub-parsers share the same token stream through `ParserBase`
 
 **Supported C Constructs**:
 - Variable declarations (with initialization)
@@ -722,8 +739,15 @@ mvn test -Dtest=TestCaseRunner
 | `getDetailedErrorReport()` | 获取详细错误报告 |
 
 **代码修改建议**：
-- 重构 [Parser.java](src/main/java/com/translator/parser/Parser.java)，拆分为多个解析方法
 - 添加 Checkstyle 配置进行代码风格检查
+
+**Parser 重构完成**：将原有的 1389 行 `Parser.java` 拆分为 6 个职责明确的子模块：
+- [Parser.java](src/main/java/com/translator/parser/Parser.java) - 入口类（74 行）
+- [ParserBase.java](src/main/java/com/translator/parser/ParserBase.java) - 抽象基类（172 行）
+- [TypeParser.java](src/main/java/com/translator/parser/TypeParser.java) - 类型解析（138 行）
+- [DeclarationParser.java](src/main/java/com/translator/parser/DeclarationParser.java) - 声明解析（392 行）
+- [StatementParser.java](src/main/java/com/translator/parser/StatementParser.java) - 语句解析（332 行）
+- [ExpressionParser.java](src/main/java/com/translator/parser/ExpressionParser.java) - 表达式解析（318 行）
 
 #### 7. 性能优化
 
@@ -800,7 +824,7 @@ executor.submit(() -> Translator.translateCode(cCode));
 1. ✅ 完善错误处理机制（错误分类、错误恢复、错误上下文）
 2. ✅ 添加集成测试框架（测试用例目录、测试读取器、测试运行器）
 3. ✅ 优化性能（流式处理、AST 遍历优化、缓存机制、并发安全）
-4. ⏳ 重构代码结构
+4. ✅ 重构代码结构（Parser 拆分为 6 个子模块）
 5. ⏳ 回归测试
 
 **Phase 4 - 高级特性（待启动）**
