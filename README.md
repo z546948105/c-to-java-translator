@@ -842,6 +842,103 @@ executor.submit(() -> Translator.translateCode(cCode));
 1. ⏳ 实现多文件编译支持
 2. ⏳ 添加条件编译支持
 
+### 多文件编译支持
+
+**实现方案**：
+
+| 改进项 | 实现方法 | 优先级 | 状态 |
+|--------|----------|--------|------|
+| 编译单元管理 | 创建 `CompilationUnit` 类管理每个 C 文件的 AST 和符号表 | 高 | ⏳ 待实现 |
+| 跨文件符号解析 | 实现符号表合并，支持跨文件函数调用和全局变量引用 | 高 | ⏳ 待实现 |
+| 头文件处理 | 解析 `#include` 指令，递归处理头文件内容 | 高 | ⏳ 待实现 |
+| 增量编译 | 缓存已编译的文件，只重新编译修改过的文件 | 中 | ⏳ 待实现 |
+
+**实现原理**：
+- **编译单元**：每个 C 源文件作为一个编译单元，拥有独立的 AST 和符号表
+- **符号表合并**：在所有文件解析完成后，将各编译单元的符号表合并为全局符号表
+- **跨文件引用解析**：在代码生成阶段，通过全局符号表解析跨文件的函数调用和变量引用
+- **头文件递归处理**：遇到 `#include` 指令时，递归预处理并解析头文件内容
+
+**架构设计**：
+```
+Project
+├── CompilationUnit[]    // 所有编译单元
+├── GlobalSymbolTable    // 全局符号表（合并后）
+├── FileManager         // 文件管理器（处理 #include 路径解析）
+└── BatchTranslator     // 批量翻译器（协调多文件编译流程）
+```
+
+**关键组件**：
+- `CompilationUnit`：存储单个文件的 AST、符号表、依赖关系
+- `GlobalSymbolTable`：合并所有编译单元的符号，支持跨文件查找
+- `FileManager`：解析 `#include` 路径，支持系统头文件和本地头文件
+- `BatchTranslator`：接受多个文件路径，协调编译顺序，生成完整 Java 项目
+
+**使用方式**：
+```java
+BatchTranslator translator = new BatchTranslator();
+translator.addSourceFile("src/main.c");
+translator.addSourceFile("src/utils.c");
+translator.addHeaderFile("src/utils.h");
+List<String> javaFiles = translator.translate();
+```
+
+### 条件编译支持
+
+**实现方案**：
+
+| 改进项 | 实现方法 | 优先级 | 状态 |
+|--------|----------|--------|------|
+| `#ifdef`/`#ifndef` 支持 | 在预处理阶段解析条件编译指令，根据条件包含/排除代码 | 高 | ⏳ 待实现 |
+| `#define` 宏条件 | 支持基于宏定义的条件判断 | 高 | ⏳ 待实现 |
+| `#else`/`#elif` 支持 | 支持条件分支的完整语法 | 中 | ⏳ 待实现 |
+| `#if` 表达式求值 | 支持简单常量表达式求值 | 中 | ⏳ 待实现 |
+| `#undef` 支持 | 支持取消宏定义 | 低 | ⏳ 待实现 |
+
+**实现原理**：
+- **条件栈**：维护一个条件栈，记录当前条件编译的嵌套层级和每个层级的条件结果
+- **宏定义状态**：在预处理阶段跟踪所有已定义的宏，用于条件判断
+- **代码包含/排除**：根据条件结果决定是否将代码传递给后续的词法分析阶段
+
+**架构设计**：
+```
+Preprocessor
+├── ConditionalStack    // 条件栈，记录嵌套条件的结果
+├── MacroTable          // 宏定义表，用于 #ifdef 判断
+├── ExpressionEvaluator // 表达式求值器，用于 #if 判断
+└── ConditionalParser   // 条件编译指令解析器
+```
+
+**支持的指令**：
+| C 指令 | 说明 | Java 处理方式 |
+|--------|------|--------------|
+| `#ifdef MACRO` | 如果宏已定义则包含代码 | 保留代码（宏存在时） |
+| `#ifndef MACRO` | 如果宏未定义则包含代码 | 保留代码（宏不存在时） |
+| `#else` | 条件分支的 else | 保留 else 分支代码 |
+| `#elif` | 条件分支的 else if | 保留符合条件的分支代码 |
+| `#endif` | 结束条件块 | 弹出条件栈 |
+| `#if expr` | 如果表达式为真则包含代码 | 求值表达式，保留代码（表达式为真时） |
+| `#undef MACRO` | 取消宏定义 | 从宏表中删除宏 |
+
+**使用示例**：
+```c
+#ifdef DEBUG
+    printf("Debug mode enabled\n");
+#endif
+
+#ifndef RELEASE
+    #define LOG_LEVEL 3
+#else
+    #define LOG_LEVEL 1
+#endif
+
+#if VERSION >= 2
+    void newFeature();
+#else
+    void legacyFeature();
+#endif
+```
+
 ## License
 
 This project is for internal use in domestic software migration projects.
