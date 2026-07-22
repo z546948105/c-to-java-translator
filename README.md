@@ -348,6 +348,43 @@ java -jar target/c-to-java-translator-1.0.0.jar
 
 The server will start on port 9988.
 
+### Docker Deployment
+
+**Dockerfile**：[Dockerfile](Dockerfile)
+- 采用多阶段构建策略，Builder 阶段编译，Runtime 阶段仅包含 JRE
+- 基于 `openjdk:8-jre-alpine`，镜像体积小
+
+**docker-compose.yml**：[docker-compose.yml](docker-compose.yml)
+- 配置端口映射、环境变量、日志持久化
+
+**使用方式**：
+
+```bash
+# 使用 docker-compose 构建并启动（推荐）
+docker-compose up -d
+
+# 查看容器日志
+docker-compose logs -f
+
+# 停止容器
+docker-compose down
+
+# 单独构建镜像
+docker build -t c-trans-java .
+
+# 单独运行容器
+docker run -d -p 9988:9988 --name c-trans-java c-trans-java
+```
+
+**配置说明**：
+
+| 配置项 | 值 | 说明 |
+|--------|-----|------|
+| 端口映射 | 9988:9988 | 容器端口映射到宿主机 |
+| JVM 内存 | 512m-1024m | 堆内存限制 |
+| 日志目录 | ./logs:/app/logs | 日志持久化到宿主机 |
+| 重启策略 | unless-stopped | 容器退出时自动重启（非手动停止） |
+
 ### Usage
 
 **Via API**:
