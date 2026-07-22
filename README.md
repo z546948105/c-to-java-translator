@@ -650,12 +650,37 @@ int[] arr = new ArrayList<Integer>();  // 类型不匹配
 | 改进项 | 实现方法 | 优先级 | 状态 |
 |--------|----------|--------|------|
 | 单元测试 | 使用 JUnit 5 为核心组件编写单元测试 | 高 | ✅ 已实现 |
-| 集成测试 | 创建测试用例目录，包含各种 C 代码片段及其期望的 Java 输出 | 高 | ⏳ 待扩展 |
+| 集成测试 | 创建测试用例目录，包含各种 C 代码片段及其期望的 Java 输出 | 高 | ✅ 已实现 |
 | 边界测试 | 添加空文件、超大文件、畸形代码等边界情况测试 | 中 | ⏳ 待实现 |
 | 回归测试 | 设置 CI 流水线，每次提交自动运行测试 | 中 | ⏳ 待实现 |
 
-**代码修改建议**：
-- 创建测试用例资源目录 `src/test/resources/testcases/`
+**集成测试框架实现**：
+
+**测试用例目录**（`src/test/resources/testcases/`）：
+
+| 测试用例 | 描述 | 覆盖功能 |
+|----------|------|----------|
+| `basic_types.c` | 基本数据类型 | int, long, short, char, float, double |
+| `control_flow.c` | 控制流语句 | if-else, while loop, for loop |
+| `string_operations.c` | 字符串操作 | strcpy, strcat, strlen, strcmp |
+| `file_operations.c` | 文件操作 | fopen, fgets, fclose |
+| `memory_management.c` | 内存管理 | malloc, sizeof, free |
+| `pointer_operations.c` | 指针操作 | *(ptr+i), *ptr++, *++ptr |
+| `function_pointer.c` | 函数指针 | BiFunction, Supplier, Consumer |
+
+**测试工具类**：
+
+| 文件 | 功能 |
+|------|------|
+| [TestCaseReader.java](src/test/java/com/translator/TestCaseReader.java) | 读取测试用例文件（.c 和 .expected.java） |
+| [TestCaseRunner.java](src/test/java/com/translator/TestCaseRunner.java) | 运行所有测试用例并验证转换结果 |
+
+**运行命令**：
+```bash
+mvn test -Dtest=TestCaseRunner
+```
+
+**测试结果**：✅ 所有 7 个测试用例均通过
 
 #### 6. 代码质量改进
 
@@ -716,9 +741,10 @@ int[] arr = new ArrayList<Integer>();  // 类型不匹配
 
 **Phase 3 - 质量与性能（进行中）**
 1. ✅ 完善错误处理机制（错误分类、错误恢复、错误上下文）
-2. ⏳ 重构代码结构
-3. ⏳ 优化性能
-4. ⏳ 添加集成测试和回归测试
+2. ✅ 添加集成测试框架（测试用例目录、测试读取器、测试运行器）
+3. ⏳ 重构代码结构
+4. ⏳ 优化性能
+5. ⏳ 回归测试
 
 **Phase 4 - 高级特性（待启动）**
 1. ⏳ 实现多文件编译支持
