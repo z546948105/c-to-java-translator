@@ -84,7 +84,7 @@ public class StdlibMapper {
                 return new FunctionCall(new Identifier("new ArrayList<>"), new ArrayList<>());
 
             case "free":
-                return new FunctionCall(new Identifier("/* free removed */"), new ArrayList<>());
+                return null;
 
             case "strlen":
                 if (!newArgs.isEmpty()) {

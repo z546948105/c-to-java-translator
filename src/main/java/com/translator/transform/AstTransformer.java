@@ -304,6 +304,9 @@ public class AstTransformer implements AstVisitor<AstNode> {
     @Override
     public AstNode visitExpressionStatement(ExpressionStatement node) {
         AstNode javaExpr = node.getExpression().accept(this);
+        if (javaExpr == null) {
+            return null;
+        }
         return new ExpressionStatement(javaExpr);
     }
 
@@ -462,6 +465,9 @@ public class AstTransformer implements AstVisitor<AstNode> {
     public AstNode visitFunctionCall(FunctionCall node) {
         if (StdlibMapper.isStdlibFunction(node.getName().getName())) {
             AstNode mapped = StdlibMapper.mapFunctionCall(node);
+            if (mapped == null) {
+                return null;
+            }
             if (mapped instanceof FunctionCall) {
                 FunctionCall fc = (FunctionCall) mapped;
                 List<AstNode> javaArgs = new ArrayList<>();
