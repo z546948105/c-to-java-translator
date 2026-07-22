@@ -477,9 +477,21 @@ public class CodeGenerator implements AstVisitor<String> {
     @Override
     public String visitUnsupportedCode(UnsupportedCode node) {
         StringBuilder sb = new StringBuilder();
-        sb.append("// [UNSUPPORTED] Line ").append(node.getLine()).append("\n");
+        sb.append("// [").append(node.getError().getType().getEnglishName()).append("] Line ").append(node.getLine());
+        if (node.getError().getColumn() > 0) {
+            sb.append(", Column ").append(node.getError().getColumn());
+        }
+        sb.append("\n");
         sb.append("// Reason: ").append(node.getReason()).append("\n");
         sb.append("// Original: ").append(node.getOriginalCode());
+        String context = node.getContext();
+        if (context != null && !context.isEmpty()) {
+            sb.append("\n// Context:\n");
+            String[] contextLines = context.split("\n");
+            for (String ctxLine : contextLines) {
+                sb.append("//   ").append(ctxLine).append("\n");
+            }
+        }
         return sb.toString();
     }
 

@@ -1,6 +1,9 @@
 package com.translator.parser;
 
 import com.translator.ast.*;
+import com.translator.error.ErrorCollector;
+import com.translator.error.ErrorType;
+import com.translator.error.TranslationError;
 import com.translator.token.Lexer;
 import com.translator.token.Token;
 import com.translator.token.TokenType;
@@ -24,10 +27,31 @@ import java.util.List;
 public class Parser {
     private final Lexer lexer;
     private Token currentToken;
+    private String[] sourceLines;
+    private ErrorCollector errorCollector;
 
     public Parser(Lexer lexer) {
         this.lexer = lexer;
         this.currentToken = lexer.nextToken();
+        this.errorCollector = new ErrorCollector();
+    }
+
+    public Parser(Lexer lexer, String source) {
+        this.lexer = lexer;
+        this.currentToken = lexer.nextToken();
+        this.sourceLines = source.split("\n");
+        this.errorCollector = new ErrorCollector();
+    }
+
+    public Parser(Lexer lexer, String source, ErrorCollector errorCollector) {
+        this.lexer = lexer;
+        this.currentToken = lexer.nextToken();
+        this.sourceLines = source.split("\n");
+        this.errorCollector = errorCollector;
+    }
+
+    public ErrorCollector getErrorCollector() {
+        return errorCollector;
     }
 
     private Token peek() {
@@ -38,7 +62,17 @@ public class Parser {
         if (currentToken.getType() == type) {
             currentToken = lexer.nextToken();
         } else {
-            throw new RuntimeException("Expected token " + type + " but got " + currentToken.getType() + " at line " + currentToken.getLine());
+            String message = String.format("Expected token %s but got %s", type, currentToken.getType());
+            String context = getErrorContext(currentToken.getLine(), 2);
+            errorCollector.addError(
+                ErrorType.SYNTAX_ERROR,
+                message,
+                currentToken.getLine(),
+                currentToken.getColumn(),
+                currentToken.getValue(),
+                context
+            );
+            throw new RuntimeException(message);
         }
     }
 
@@ -60,16 +94,68 @@ public class Parser {
     }
 
     private UnsupportedCode createUnsupportedCode(String reason) {
+        return createUnsupportedCode(reason, ErrorType.UNSUPPORTED_FEATURE);
+    }
+
+    private UnsupportedCode createUnsupportedCode(String reason, ErrorType errorType) {
         String originalCode = consumeUntil(TokenType.SEMICOLON, TokenType.LBRACE, TokenType.RBRACE, TokenType.EOF);
         int line = currentToken.getLine();
+        int column = currentToken.getColumn();
         if (match(TokenType.SEMICOLON) || match(TokenType.LBRACE) || match(TokenType.RBRACE)) {
             currentToken = lexer.nextToken();
         }
-        return new UnsupportedCode(originalCode, reason, line);
+        String context = getErrorContext(line, 2);
+        
+        errorCollector.addError(errorType, reason, line, column, originalCode, context);
+        
+        return new UnsupportedCode(originalCode, reason, line, context);
+    }
+
+    private void panicModeRecovery() {
+        while (currentToken != null && 
+               currentToken.getType() != TokenType.EOF &&
+               currentToken.getType() != TokenType.SEMICOLON &&
+               currentToken.getType() != TokenType.LBRACE &&
+               currentToken.getType() != TokenType.RBRACE &&
+               currentToken.getType() != TokenType.IF &&
+               currentToken.getType() != TokenType.WHILE &&
+               currentToken.getType() != TokenType.FOR &&
+               currentToken.getType() != TokenType.DO &&
+               currentToken.getType() != TokenType.SWITCH &&
+               currentToken.getType() != TokenType.RETURN &&
+               currentToken.getType() != TokenType.BREAK &&
+               currentToken.getType() != TokenType.CONTINUE) {
+            currentToken = lexer.nextToken();
+        }
+        
+        if (currentToken != null && currentToken.getType() == TokenType.SEMICOLON) {
+            currentToken = lexer.nextToken();
+        }
     }
 
     private boolean match(TokenType type) {
         return currentToken.getType() == type;
+    }
+
+    private String getErrorContext(int errorLine, int contextSize) {
+        if (sourceLines == null) {
+            return "";
+        }
+        StringBuilder context = new StringBuilder();
+        int startLine = Math.max(0, errorLine - 1 - contextSize);
+        int endLine = Math.min(sourceLines.length, errorLine + contextSize);
+        
+        for (int i = startLine; i < endLine; i++) {
+            int displayLine = i + 1;
+            context.append(String.format("%4d: %s", displayLine, sourceLines[i]));
+            if (i == errorLine - 1) {
+                context.append(" <<< ERROR HERE");
+            }
+            if (i < endLine - 1) {
+                context.append("\n");
+            }
+        }
+        return context.toString();
     }
 
     private void skipWhitespace() {
@@ -112,6 +198,7 @@ public class Parser {
             } catch (RuntimeException e) {
                 String reason = e.getMessage();
                 declarations.add(createUnsupportedCode(reason));
+                panicModeRecovery();
             }
         }
         return new Program(declarations);

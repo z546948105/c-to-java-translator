@@ -28,7 +28,7 @@ public class Translator {
         Preprocessor preprocessor = new Preprocessor();
         String preprocessedCode = preprocessor.preprocess(cCode);
         this.lexer = new Lexer(preprocessedCode);
-        this.parser = new Parser(lexer);
+        this.parser = new Parser(lexer, preprocessedCode);
         this.transformer = new AstTransformer();
         this.codeGenerator = new CodeGenerator();
     }
@@ -37,7 +37,7 @@ public class Translator {
         Preprocessor preprocessor = new Preprocessor();
         String preprocessedCode = preprocessor.preprocess(cCode);
         this.lexer = new Lexer(preprocessedCode);
-        this.parser = new Parser(lexer);
+        this.parser = new Parser(lexer, preprocessedCode);
         this.transformer = new AstTransformer(className);
         this.codeGenerator = new CodeGenerator();
     }
