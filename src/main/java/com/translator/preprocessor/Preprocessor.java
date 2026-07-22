@@ -13,6 +13,11 @@ import java.util.*;
  * - 处理注释（保留行号信息）
  */
 public class Preprocessor {
+    private static final int DEFINE_PREFIX_LENGTH = 7;
+    private static final int NOT_FOUND = -1;
+    private static final int SKIP_ONE_CHAR = 1;
+    private static final int SKIP_TWO_CHARS = 2;
+
     private final Map<String, Macro> macros = new HashMap<>();
     private final Set<String> expandingMacros = new HashSet<>();
 
@@ -111,7 +116,7 @@ public class Preprocessor {
      * 解析 #define 指令
      */
     private void parseDefine(String line) {
-        String remaining = line.trim().substring(7).trim();
+        String remaining = line.trim().substring(DEFINE_PREFIX_LENGTH).trim();
 
         int nameEnd = 0;
         while (nameEnd < remaining.length() && Character.isJavaIdentifierPart(remaining.charAt(nameEnd))) {
@@ -130,7 +135,7 @@ public class Preprocessor {
 
         if (remaining.startsWith("(")) {
             int paramEnd = findMatchingParen(remaining, 0);
-            if (paramEnd != -1) {
+            if (paramEnd != NOT_FOUND) {
                 String paramStr = remaining.substring(1, paramEnd);
                 parameters = parseParameters(paramStr);
                 remaining = remaining.substring(paramEnd + 1).trim();
@@ -165,7 +170,7 @@ public class Preprocessor {
                 i = skipStringLiteral(str, i);
             }
         }
-        return -1;
+        return NOT_FOUND;
     }
 
     /**
@@ -245,7 +250,7 @@ public class Preprocessor {
                     if (macro.isFunctionMacro()) {
                         if (i < line.length() && line.charAt(i) == '(') {
                             int argEnd = findMatchingParen(line, i);
-                            if (argEnd != -1) {
+                            if (argEnd != NOT_FOUND) {
                                 String argStr = line.substring(i + 1, argEnd);
                                 List<String> args = parseArguments(argStr);
                                 String expanded = macro.expand(args);

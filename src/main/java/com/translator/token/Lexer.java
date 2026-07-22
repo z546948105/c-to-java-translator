@@ -22,6 +22,10 @@ public class Lexer {
     private int column;
     private static final Map<String, TokenType> keywords = new HashMap<>();
     private static final int BUFFER_SIZE = 8192;
+    private static final int MARK_MAX_LENGTH = 10000;
+    private static final int INITIAL_LINE = 1;
+    private static final int INITIAL_COLUMN = 0;
+    private static final int EOF_CHAR = -1;
 
     static {
         keywords.put("int", TokenType.INT);
@@ -57,8 +61,8 @@ public class Lexer {
 
     public Lexer(String input) {
         this.reader = new BufferedReader(new StringReader(input));
-        this.line = 1;
-        this.column = 0;
+        this.line = INITIAL_LINE;
+        this.column = INITIAL_COLUMN;
         readNextChar();
     }
 
@@ -68,8 +72,8 @@ public class Lexer {
 
     public Lexer(File file, Charset charset) throws IOException {
         this.reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), charset), BUFFER_SIZE);
-        this.line = 1;
-        this.column = 0;
+        this.line = INITIAL_LINE;
+        this.column = INITIAL_COLUMN;
         readNextChar();
     }
 
@@ -79,8 +83,8 @@ public class Lexer {
 
     public Lexer(InputStream inputStream, Charset charset) throws IOException {
         this.reader = new BufferedReader(new InputStreamReader(inputStream, charset), BUFFER_SIZE);
-        this.line = 1;
-        this.column = 0;
+        this.line = INITIAL_LINE;
+        this.column = INITIAL_COLUMN;
         readNextChar();
     }
 
@@ -92,7 +96,7 @@ public class Lexer {
 
     public Token peekToken() {
         try {
-            reader.mark(10000);
+            reader.mark(MARK_MAX_LENGTH);
             int currentLine = line;
             int currentColumn = column;
             int currentCharBackup = currentChar;
@@ -108,7 +112,7 @@ public class Lexer {
     }
 
     private void skipWhitespace() {
-        while (currentChar != -1 && Character.isWhitespace(currentChar)) {
+        while (currentChar != EOF_CHAR && Character.isWhitespace(currentChar)) {
             readNextChar();
         }
     }
@@ -154,12 +158,12 @@ public class Lexer {
                 column++;
             }
         } catch (IOException e) {
-            currentChar = -1;
+            currentChar = EOF_CHAR;
         }
     }
 
     public Token nextToken() {
-        while (currentChar != -1 && Character.isWhitespace(currentChar)) {
+        while (currentChar != EOF_CHAR && Character.isWhitespace(currentChar)) {
             readNextChar();
         }
 
@@ -168,7 +172,7 @@ public class Lexer {
         }
 
         if (currentChar == '#') {
-            while (currentChar != -1 && currentChar != '\n') {
+            while (currentChar != EOF_CHAR && currentChar != '\n') {
                 readNextChar();
             }
             if (currentChar == '\n') {
@@ -201,7 +205,7 @@ public class Lexer {
         int startLine = line;
         int startCol = column;
 
-        while (currentChar != -1 && (Character.isLetterOrDigit(currentChar) || currentChar == '_')) {
+        while (currentChar != EOF_CHAR && (Character.isLetterOrDigit(currentChar) || currentChar == '_')) {
             sb.append((char) currentChar);
             readNextChar();
         }
@@ -223,7 +227,7 @@ public class Lexer {
             if (currentChar == 'x' || currentChar == 'X') {
                 sb.append((char) currentChar);
                 readNextChar();
-                while (currentChar != -1 && (Character.isDigit(currentChar) || 
+                while (currentChar != EOF_CHAR && (Character.isDigit(currentChar) || 
                        (currentChar >= 'a' && currentChar <= 'f') || 
                        (currentChar >= 'A' && currentChar <= 'F'))) {
                     sb.append((char) currentChar);
@@ -232,12 +236,12 @@ public class Lexer {
             } else if (currentChar == 'b' || currentChar == 'B') {
                 sb.append((char) currentChar);
                 readNextChar();
-                while (currentChar != -1 && (currentChar == '0' || currentChar == '1')) {
+                while (currentChar != EOF_CHAR && (currentChar == '0' || currentChar == '1')) {
                     sb.append((char) currentChar);
                     readNextChar();
                 }
             } else {
-                while (currentChar != -1 && (Character.isDigit(currentChar) || currentChar == '.')) {
+                while (currentChar != EOF_CHAR && (Character.isDigit(currentChar) || currentChar == '.')) {
                     if (currentChar == '.') {
                         if (hasDecimal) {
                             break;
@@ -249,7 +253,7 @@ public class Lexer {
                 }
             }
         } else {
-            while (currentChar != -1 && (Character.isDigit(currentChar) || currentChar == '.')) {
+            while (currentChar != EOF_CHAR && (Character.isDigit(currentChar) || currentChar == '.')) {
                 if (currentChar == '.') {
                     if (hasDecimal) {
                         break;
@@ -261,7 +265,7 @@ public class Lexer {
             }
         }
 
-        while (currentChar != -1 && (currentChar == 'u' || currentChar == 'U' || 
+        while (currentChar != EOF_CHAR && (currentChar == 'u' || currentChar == 'U' || 
                currentChar == 'l' || currentChar == 'L' || 
                currentChar == 'f' || currentChar == 'F' ||
                currentChar == 'd' || currentChar == 'D')) {
@@ -277,10 +281,10 @@ public class Lexer {
         int startCol = column;
 
         readNextChar();
-        while (currentChar != -1 && currentChar != '"') {
+        while (currentChar != EOF_CHAR && currentChar != '"') {
             if (currentChar == '\\') {
                 readNextChar();
-                if (currentChar != -1) {
+                if (currentChar != EOF_CHAR) {
                     switch (currentChar) {
                         case 'n': sb.append('\n'); break;
                         case 't': sb.append('\t'); break;
@@ -306,10 +310,10 @@ public class Lexer {
         int startCol = column;
 
         readNextChar();
-        while (currentChar != -1 && currentChar != '\'') {
+        while (currentChar != EOF_CHAR && currentChar != '\'') {
             if (currentChar == '\\') {
                 readNextChar();
-                if (currentChar != -1) {
+                if (currentChar != EOF_CHAR) {
                     switch (currentChar) {
                         case 'n': sb.append('\n'); break;
                         case 't': sb.append('\t'); break;
@@ -376,13 +380,13 @@ public class Lexer {
                     readNextChar();
                     return new Token(TokenType.DIV_ASSIGN, "/=", startLine, startCol);
                 } else if (currentChar == '/') {
-                    while (currentChar != -1 && currentChar != '\n') {
+                    while (currentChar != EOF_CHAR && currentChar != '\n') {
                         readNextChar();
                     }
                     return nextToken();
                 } else if (currentChar == '*') {
                     readNextChar();
-                    while (currentChar != -1) {
+                    while (currentChar != EOF_CHAR) {
                         if (currentChar == '*' && peek() == '/') {
                             readNextChar();
                             readNextChar();

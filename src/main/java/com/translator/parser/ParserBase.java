@@ -8,6 +8,10 @@ import com.translator.token.Token;
 import com.translator.token.TokenType;
 
 abstract class ParserBase {
+    protected static final int DEFAULT_CONTEXT_SIZE = 2;
+    protected static final int ARRAY_START_INDEX = 0;
+    protected static final int LINE_NUMBER_OFFSET = 1;
+
     protected final Lexer lexer;
     protected Token currentToken;
     protected String[] sourceLines;
@@ -42,7 +46,7 @@ abstract class ParserBase {
             currentToken = lexer.nextToken();
         } else {
             String message = String.format("Expected token %s but got %s", type, currentToken.getType());
-            String context = getErrorContext(currentToken.getLine(), 2);
+            String context = getErrorContext(currentToken.getLine(), DEFAULT_CONTEXT_SIZE);
             errorCollector.addError(
                 ErrorType.SYNTAX_ERROR,
                 message,
@@ -83,7 +87,7 @@ abstract class ParserBase {
         if (match(TokenType.SEMICOLON) || match(TokenType.LBRACE) || match(TokenType.RBRACE)) {
             currentToken = lexer.nextToken();
         }
-        String context = getErrorContext(line, 2);
+        String context = getErrorContext(line, DEFAULT_CONTEXT_SIZE);
         
         errorCollector.addError(errorType, reason, line, column, originalCode, context);
         
@@ -121,16 +125,16 @@ abstract class ParserBase {
             return "";
         }
         StringBuilder context = new StringBuilder();
-        int startLine = Math.max(0, errorLine - 1 - contextSize);
+        int startLine = Math.max(ARRAY_START_INDEX, errorLine - LINE_NUMBER_OFFSET - contextSize);
         int endLine = Math.min(sourceLines.length, errorLine + contextSize);
         
         for (int i = startLine; i < endLine; i++) {
-            int displayLine = i + 1;
+            int displayLine = i + LINE_NUMBER_OFFSET;
             context.append(String.format("%4d: %s", displayLine, sourceLines[i]));
-            if (i == errorLine - 1) {
+            if (i == errorLine - LINE_NUMBER_OFFSET) {
                 context.append(" <<< ERROR HERE");
             }
-            if (i < endLine - 1) {
+            if (i < endLine - LINE_NUMBER_OFFSET) {
                 context.append("\n");
             }
         }
