@@ -289,6 +289,45 @@ public class StdlibMapper {
                 }
                 return call;
 
+            case "time":
+                FunctionCall currentTimeCall = new FunctionCall(
+                    new Identifier("System.currentTimeMillis"),
+                    new ArrayList<>()
+                );
+                BinaryExpression secondsExpr = new BinaryExpression(
+                    currentTimeCall,
+                    "/",
+                    new Literal("1000", Literal.LiteralType.INTEGER)
+                );
+                if (!newArgs.isEmpty()) {
+                    AstNode arg = newArgs.get(0);
+                    boolean isNull = false;
+                    if (arg instanceof Identifier && "NULL".equals(((Identifier) arg).getName())) {
+                        isNull = true;
+                    } else if (arg instanceof Literal && "0".equals(((Literal) arg).getValue())) {
+                        isNull = true;
+                    }
+                    if (isNull) {
+                        return secondsExpr;
+                    }
+                    return new Assignment(arg, secondsExpr);
+                }
+                return secondsExpr;
+
+            case "clock":
+                return new FunctionCall(new Identifier("System.nanoTime"), new ArrayList<>());
+
+            case "sleep":
+                if (!newArgs.isEmpty()) {
+                    BinaryExpression msArg = new BinaryExpression(
+                        newArgs.get(0),
+                        "*",
+                        new Literal("1000", Literal.LiteralType.INTEGER)
+                    );
+                    return new FunctionCall(new Identifier("Thread.sleep"), java.util.Arrays.asList(msArg));
+                }
+                return call;
+
             default:
                 String javaName = stdlibMap.get(name);
                 return new FunctionCall(new Identifier(javaName), newArgs);
@@ -372,6 +411,8 @@ public class StdlibMapper {
         stdlibMap.put("rand", "Math.random");
         stdlibMap.put("srand", "/* srand removed */");
         stdlibMap.put("time", "System.currentTimeMillis");
+        stdlibMap.put("clock", "System.nanoTime");
+        stdlibMap.put("sleep", "Thread.sleep");
         stdlibMap.put("memcpy", "System.arraycopy");
         stdlibMap.put("memset", "Arrays.fill");
 

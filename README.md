@@ -253,6 +253,10 @@ Multi-level pointers are converted to multi-dimensional arrays:
 | `atof()` | `Double.parseDouble()` | |
 | `itoa()` | `Integer.toString()` | |
 | `ltoa()` | `Long.toString()` | |
+| `time(NULL)` | `System.currentTimeMillis() / 1000` | 获取当前时间（秒） |
+| `time(&t)` | `t = System.currentTimeMillis() / 1000` | 获取时间并存储到变量 |
+| `clock()` | `System.nanoTime()` | 获取高精度时间 |
+| `sleep(n)` | `Thread.sleep(n * 1000)` | 休眠 n 秒（需处理 InterruptedException） |
 
 ### 7. CodeGenerator (代码生成器)
 
@@ -544,7 +548,7 @@ int area = PI * r * r;      // PI 被忽略
 | 文件 I/O 映射 | 在 StdlibMapper 中添加 `fopen`→`FileInputStream` 等映射 | 高 | ✅ 已实现 |
 | 字符串函数映射 | 完善 `strcpy`, `strcat`, `strcmp` 等函数的 Java 等效实现 | 高 | ✅ 已实现 |
 | 内存管理优化 | 使用 Java 集合框架替代手动内存管理，`malloc/calloc/realloc` → `ArrayList` | 中 | ✅ 已实现 |
-| 时间函数支持 | 添加 `time`, `clock`, `sleep` 等时间函数映射 | 中 | ⏳ 待实现 |
+| 时间函数支持 | 添加 `time`, `clock`, `sleep` 等时间函数映射 | 中 | ✅ 已实现 |
 
 **代码修改建议**：
 - 扩展 [StdlibMapper.java](src/main/java/com/translator/transform/StdlibMapper.java) 添加更多映射规则
