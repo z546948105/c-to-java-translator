@@ -690,8 +690,36 @@ mvn test -Dtest=TestCaseRunner
 |--------|----------|--------|------|
 | 添加代码注释 | 为核心算法和复杂逻辑添加 Javadoc 注释 | 低 | ✅ 已实现 |
 | Parser 重构 | 将复杂解析逻辑拆分为更小的方法，提高可读性 | 中 | ⏳ 待实现 |
-| 错误处理统一 | 创建 `ErrorHandler` 类统一处理错误检测和报告 | 中 | ⏳ 待实现 |
+| 错误处理统一 | 创建 `ErrorHandler` 类统一处理错误检测和报告 | 中 | ✅ 已实现 |
 | 魔法数字消除 | 将魔法数字提取为常量 | 低 | ⏳ 待实现 |
+
+**错误处理系统实现**：
+
+**错误类型枚举**（[ErrorType.java](src/main/java/com/translator/error/ErrorType.java)）：
+
+| 错误类型 | 描述 |
+|----------|------|
+| `SYNTAX_ERROR` | 语法错误 |
+| `SEMANTIC_ERROR` | 语义错误 |
+| `TYPE_ERROR` | 类型错误 |
+| `UNSUPPORTED_FEATURE` | 不支持的特性 |
+| `PARSE_ERROR` | 解析错误 |
+| `PREPROCESSOR_ERROR` | 预处理错误 |
+| `TRANSFORMATION_ERROR` | 转换错误 |
+| `CODE_GENERATION_ERROR` | 代码生成错误 |
+
+**统一错误处理**（[ErrorHandler.java](src/main/java/com/translator/error/ErrorHandler.java)）：
+
+| 功能 | 说明 |
+|------|------|
+| `reportSyntaxError()` | 报告语法错误 |
+| `reportSemanticError()` | 报告语义错误 |
+| `reportTypeError()` | 报告类型错误 |
+| `reportUnsupportedFeature()` | 报告不支持的特性 |
+| `reportParseError()` | 报告解析错误 |
+| `extractContext()` | 提取错误上下文（周围代码） |
+| `getErrorSummary()` | 获取错误摘要 |
+| `getDetailedErrorReport()` | 获取详细错误报告 |
 
 **代码修改建议**：
 - 重构 [Parser.java](src/main/java/com/translator/parser/Parser.java)，拆分为多个解析方法
